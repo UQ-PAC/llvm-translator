@@ -4,7 +4,7 @@
 
 
 #include "llvm/IR/Module.h"
-#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
 
 #include "llvm/Support/raw_ostream.h"
@@ -12,9 +12,11 @@
 
 #include "llvm/IR/Instructions.h"
 
+#include "context.h"
+#include "state.h"
+
 using namespace llvm;
 
-LLVMContext Context{};
 
 BasicBlock& newEntryBlock(Function& f) {
     BasicBlock* oldEntry = f.empty() ? nullptr : &f.getEntryBlock();
@@ -25,24 +27,36 @@ BasicBlock& newEntryBlock(Function& f) {
     return f.getEntryBlock();
 }
 
-void internalise(Module& module, Function& f) {
+void internaliseGlobals(Module& module, Function& f) {
 
-    BasicBlock& entry = newEntryBlock(f);
-    Instruction& insertion = *entry.getFirstInsertionPt();
+    Instruction& insertion = *f.getEntryBlock().getFirstInsertionPt();
 
     for (auto& g : (module.getGlobalList())) {
 
-        std::string nm{"state__"};
-        nm.append(g.getName());
-
         Instruction* alloc = new AllocaInst(
             g.getInitializer()->getType(), /*addrspace*/0, /*arraysize*/nullptr,
-            nm, &insertion);
+            g.getName(), &insertion);
 
         g.replaceAllUsesWith(alloc);
     }
 
     // module.getGlobalList().clear();
+}
+
+void internaliseParams(Function& f) {
+    Instruction& insertion = *f.getEntryBlock().getFirstInsertionPt();
+
+    for (auto& a : f.args()) {
+
+        std::string nm {"arg"};
+        nm.append(a.getName());
+
+        Instruction* alloc = new AllocaInst(
+            a.getType(), /*addrspace*/0, /*arraysize*/nullptr,
+            nm, &insertion);
+
+        a.replaceAllUsesWith(alloc);
+    }
 }
 
 
@@ -59,13 +73,15 @@ int main(int argc, char** argv)
         exit(1);
     }
 
+    Context.enableOpaquePointers(); // llvm 14 specific 
+
     SMDiagnostic Err{};
-    std::unique_ptr<Module> Mod = parseIRFile(argv[1], Err, Context);
-    if (!Mod) {
+    std::unique_ptr<Module> ModPtr = parseIRFile(argv[1], Err, Context);
+    if (!ModPtr) {
         Err.print(argv[0], errs());
         return 1;
     }
-    //outs() << *Mod;
+    Module& Mod = *ModPtr;
 
     // outs() << "==============\n";
 
@@ -73,17 +89,23 @@ int main(int argc, char** argv)
     // outs() << "==============\n";
 
 
-    auto& funcs = Mod->getFunctionList();
+    auto& funcs = Mod.getFunctionList();
     assert(funcs.size() >= 1);
     Function& f = funcs.front();
-    internalise(*Mod, f);
+    newEntryBlock(f);
+    internaliseGlobals(Mod, f);
+    internaliseParams(f);
+
+    generateGlobalState(Mod);
 
     // after internalising global variables, delete old global declarations.
-    for (auto& g : Mod->getGlobalList()) {
+    for (auto& g : Mod.getGlobalList()) {
         assert(g.user_empty());
     }
-    Mod->getGlobalList().clear();
+    // Mod.getGlobalList().clear();
 
-    Mod->print(outs(), nullptr);
+    verifyModule(Mod);
+
+    Mod.print(outs(), nullptr);
     return 0;
 }

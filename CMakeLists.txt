@@ -19,7 +19,7 @@ llvm_map_components_to_libnames(llvm_libs support core irreader)
 link_libraries(${llvm_libs})
 
 # add the executable
-add_executable(go src/main.cpp)
+add_executable(go src/main.cpp src/state.cpp src/context.cpp)
 
 target_compile_options(go PRIVATE -g -fsanitize=address)
 target_link_options(go PRIVATE -g -fsanitize=address)
