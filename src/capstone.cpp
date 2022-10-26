@@ -39,24 +39,38 @@ void capstone(Module& m) {
     assert(m.getFunctionList().size() > 0);
 
     Function& f = *m.begin();
-    BasicBlock& entry = newEntryBlock(f);
-    Instruction* insert = entry.getFirstNonPHI();
+    // BasicBlock& entry = newEntryBlock(f);
+    assert(!f.empty() && "function empty");
+    Instruction* front = f.getEntryBlock().getFirstNonPHI();
+
+    ReturnInst* back = &uniqueReturn(f);
 
     auto capstone = internaliseGlobals(m, f);
     auto unified = generateGlobalState(m);
 
-    for (auto cap : capstone) {
+    // here, cap refers to the capstone-specific variable
+    // glo is the allocated global
+    // reg is the abstract description
+
+    for (auto* cap : capstone) {
         auto stateOpt = discriminateGlobal(*cap);
         if (stateOpt.has_value()) {
-            StateReg value = *stateOpt;
+            StateReg reg = *stateOpt;
 
-            auto nm = value.name();
+            auto nm = reg.name();
+            Type* ty = reg.ty();
             GlobalVariable* glo = m.getNamedGlobal(nm);
             assert(glo != nullptr && "unified global variable not found");
             
-            nm.append("__load");
-            auto load = new LoadInst(cap->getType(), glo, nm, insert);
-            new StoreInst(load, cap, insert);
+            assert(glo->getValueType() == ty);
+            assert(cap->getAllocatedType() == ty);
+
+
+            auto loadPre = new LoadInst(ty, glo, nm + "_pre", front);
+            new StoreInst(loadPre, cap, front);
+
+            auto loadPost = new LoadInst(ty, cap, nm + "_post", back);
+            new StoreInst(loadPost, glo, back);
         } else {
             errs() << *cap << "\n";
             assert(0 && "use of unhandled capstone variable");

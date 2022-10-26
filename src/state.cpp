@@ -62,12 +62,9 @@ std::vector<AllocaInst*> internaliseGlobals(Module& module, Function& f) {
 
     for (auto& g : module.getGlobalList()) {
 
-        std::string nm {""};
-        nm.append(g.getName());
-
         auto alloc = new AllocaInst(
             g.getInitializer()->getType(), /*addrspace*/0, /*arraysize*/nullptr,
-            nm, &insertion);
+            "" + g.getName(), &insertion);
         allocs.push_back(alloc);
 
         g.replaceAllUsesWith(alloc);
@@ -83,18 +80,30 @@ std::vector<AllocaInst*> internaliseParams(Function& f) {
 
     for (auto& a : f.args()) {
 
-        std::string nm {""};
-        nm.append(a.getName());
-
         auto alloc = new AllocaInst(
             a.getType(), /*addrspace*/0, /*arraysize*/nullptr,
-            nm, &insertion);
+            "" + a.getName(), &insertion);
 
         allocs.push_back(alloc);
         a.replaceAllUsesWith(alloc);
     }
 
     return allocs;
+}
+
+ReturnInst& uniqueReturn(Function& f) {
+    // assumes there is exactly one return 
+    ReturnInst* ret = nullptr;
+    for (auto& b : f) {
+        for (auto& i : b) {
+            if (auto* r = dyn_cast<ReturnInst>(&i)) {
+                assert(ret == nullptr && "multiple returns in function");
+                ret = r;
+            }
+        }
+    }
+    assert(ret != nullptr && "no returns in function");
+    return *ret;
 }
 
 std::string StateReg::name() const {
@@ -135,4 +144,8 @@ size_t StateReg::size() const {
     } else {
         llvm_unreachable("size()");
     }
+}
+
+Type* StateReg::ty() const {
+    return Type::getIntNTy(Context, this->size());
 }

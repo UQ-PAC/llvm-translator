@@ -18,6 +18,7 @@ std::vector<GlobalVariable*> generateGlobalState(Module& m);
 BasicBlock& newEntryBlock(Function& f);
 std::vector<AllocaInst*> internaliseGlobals(Module& module, Function& f);
 std::vector<AllocaInst*> internaliseParams(Function& f);
+ReturnInst& uniqueReturn(Function&);
 
 enum StateType {
     X, V, STATUS, PC
@@ -29,4 +30,5 @@ struct StateReg {
 
     std::string name() const;
     size_t size() const;
+    Type* ty() const;
 };
