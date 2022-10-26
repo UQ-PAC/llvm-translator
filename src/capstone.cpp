@@ -57,6 +57,9 @@ void capstone(Module& m) {
             nm.append("__load");
             auto load = new LoadInst(cap->getType(), glo, nm, insert);
             new StoreInst(load, cap, insert);
+        } else {
+            errs() << *cap << "\n";
+            assert(0 && "use of unhandled capstone variable");
         }
     }
 

@@ -17,6 +17,9 @@
 
 using namespace llvm;
 
+const char *__asan_default_options() {
+    return "disable_coredump=0";
+}
 
 int main(int argc, char** argv)
 {

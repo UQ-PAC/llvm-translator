@@ -93,6 +93,7 @@
         "queue": "cpp",
         "version": "cpp",
         "*.inc": "cpp",
-        "filesystem": "cpp"
+        "filesystem": "cpp",
+        "stacktrace": "cpp"
     }
 }

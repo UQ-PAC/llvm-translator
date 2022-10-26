@@ -115,7 +115,7 @@ std::string StateReg::name() const {
     } else if (t == PC) {
         prefix = "PC";
     } else {
-        assertm(false, "unhandled StateValue::name()");
+        llvm_unreachable("name()");
     }
 
     prefix.append(suffix);
@@ -133,6 +133,6 @@ size_t StateReg::size() const {
     } else if (t == PC) {
         return 64;
     } else {
-        assertm(false, "unhandled StateValue::size()");
+        llvm_unreachable("size()");
     }
 }
