@@ -70,6 +70,8 @@ std::vector<AllocaInst*> internaliseGlobals(Module& module, Function& f) {
         g.replaceAllUsesWith(alloc);
     }
 
+    module.getGlobalList().clear();
+
     return allocs;
 }
 

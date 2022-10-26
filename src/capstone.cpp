@@ -1,5 +1,7 @@
+#include "context.h"
 #include "state.h"
 
+#include <llvm/IR/Instructions.h>
 #include <optional>
 #include <string>
 
@@ -15,8 +17,7 @@
  * to a pointer and dereferencing that pointer.
  */
 
-std::optional<StateReg> discriminateGlobal(AllocaInst& inst) {
-    std::string nm = inst.getName().str();
+std::optional<StateReg> discriminateGlobal(std::string nm) {
     if (nm.size() == 0) {
         return std::nullopt;
     }
@@ -39,6 +40,7 @@ void capstone(Module& m) {
     assert(m.getFunctionList().size() > 0);
 
     Function& f = *m.begin();
+    f.setName("main");
     // BasicBlock& entry = newEntryBlock(f);
     assert(!f.empty() && "function empty");
     Instruction* front = f.getEntryBlock().getFirstNonPHI();
@@ -53,28 +55,56 @@ void capstone(Module& m) {
     // reg is the abstract description
 
     for (auto* cap : capstone) {
-        auto stateOpt = discriminateGlobal(*cap);
+        if (cap->user_empty()) {
+            // errs() << "erased unused capstone: " << *cap << '\n';
+            cap->eraseFromParent();
+            continue;
+        }
+        std::string nm = cap->getName().str();
+        auto stateOpt = discriminateGlobal(nm);
         if (stateOpt.has_value()) {
+            // capstone variable is exactly a unified register.
+            // replace all uses directly.
             StateReg reg = *stateOpt;
-
             auto nm = reg.name();
             Type* ty = reg.ty();
+
             GlobalVariable* glo = m.getNamedGlobal(nm);
             assert(glo != nullptr && "unified global variable not found");
             
             assert(glo->getValueType() == ty);
             assert(cap->getAllocatedType() == ty);
 
-
-            auto loadPre = new LoadInst(ty, glo, nm + "_pre", front);
-            new StoreInst(loadPre, cap, front);
-
-            auto loadPost = new LoadInst(ty, cap, nm + "_post", back);
-            new StoreInst(loadPost, glo, back);
+            cap->replaceAllUsesWith(glo);
         } else {
             errs() << *cap << "\n";
-            assert(0 && "use of unhandled capstone variable");
+            assert(0 && "unhandled capstone variable");
         }
     }
+
+    GlobalVariable* pc = m.getNamedGlobal("PC");
+    assert(pc);
+    Type* ty = pc->getValueType();
+    auto* load = new LoadInst(ty, pc, "", back);
+    auto* four = ConstantInt::get(ty, 4);
+    auto* inc = BinaryOperator::Create(
+        Instruction::BinaryOps::Add, load, four, "", back);
+    new StoreInst(inc, pc, back);
+
+    auto it = std::find_if(m.begin(), m.end(), [](Function& f) { return f.getName() == "capstone_branch_cond"; });
+    assert(it != m.end() && "failed to find capstone_branch_cond function");
+    Function& branchCond = *it;
+    //outs() << branchCond;
+    assert(branchCond.arg_size() == 2);
+
+    auto* bb = BasicBlock::Create(Context, "", &branchCond);
+    auto* sel = SelectInst::Create(
+        branchCond.getArg(0),
+        BinaryOperator::Create(Instruction::BinaryOps::Sub, branchCond.getArg(1), four, "", bb),
+        new LoadInst(ty, pc, "", bb),
+        "", bb);
+    new StoreInst(sel, pc, bb);
+    ReturnInst::Create(Context, bb);
+
 
 }
