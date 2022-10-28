@@ -13,6 +13,7 @@ using namespace llvm;
  * pc
  */
 
+Function& findFunction(Module& m, std::string const& name);
 std::vector<GlobalVariable*> generateGlobalState(Module& m);
 
 BasicBlock& newEntryBlock(Function& f);

@@ -8,6 +8,14 @@ static constexpr int XS_SIZE = 64;
 static constexpr int VS_COUNT = 32;
 static constexpr int VS_SIZE = 128;
 
+Function& findFunction(Module& m, std::string const& name) {
+    auto it = std::find_if(m.begin(), m.end(), 
+        [&name](Function& f) { return f.getName() == name; });
+    assert((it != m.end() || (errs() << name, 0)) 
+        && "unable to find function matching name");
+    return *it;
+}
+
 GlobalVariable* variable(Module& m, int size, const std::string nm) {
     IntegerType* ty = Type::getIntNTy(Context, size);
 

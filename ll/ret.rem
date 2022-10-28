@@ -1,0 +1,60 @@
+; ModuleID = 'lifted_code'
+source_filename = "lifted_code"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-pc-linux-gnu-elf"
+
+%struct.State = type { %struct.AArch64State }
+%struct.AArch64State = type { %struct.ArchState, %struct.SIMD, i64, %struct.GPR, i64, %union.anon, %union.anon, %union.anon, i64, %struct.SR, i64 }
+%struct.ArchState = type { i32, i32, %union.anon }
+%struct.SIMD = type { [32 x %union.vec128_t] }
+%union.vec128_t = type { %struct.uint128v1_t }
+%struct.uint128v1_t = type { [1 x i128] }
+%struct.GPR = type { i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg }
+%struct.Reg = type { %union.anon }
+%union.anon = type { i64 }
+%struct.SR = type { i64, %struct.Reg, i64, %struct.Reg, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, [6 x i8] }
+
+define void @sub_0(ptr nonnull noundef %state, i64 %program_counter, ptr nonnull noundef %memory) {
+  %X30 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 61, i32 0, i32 0
+  %BRANCH_TAKEN = alloca i8, align 4
+  %RETURN_PC = alloca i64, align 8
+  %MONITOR = alloca i64, align 8
+  %STATE = alloca ptr, align 8
+  store ptr %state, ptr %STATE, align 8
+  %MEMORY = alloca ptr, align 8
+  store ptr %memory, ptr %MEMORY, align 8
+  %NEXT_PC = alloca i64, align 8
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  %WZR = alloca i32, align 4
+  store i32 0, ptr %WZR, align 4
+  %XZR = alloca i64, align 8
+  store i64 0, ptr %XZR, align 8
+  %IGNORE_WRITE_TO_WZR = alloca i32, align 4
+  %IGNORE_WRITE_TO_XZR = alloca i64, align 8
+  %SUPPRESS_WRITEBACK = alloca i64, align 8
+  %PC = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 65, i32 0, i32 0
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  br label %1
+
+1:                                                ; preds = %0
+  %2 = load i64, ptr %NEXT_PC, align 8
+  store i64 %2, ptr %PC, align 8
+  %3 = add i64 %2, 4
+  store i64 %3, ptr %NEXT_PC, align 8
+  %4 = load i64, ptr %X30, align 8
+  %5 = load ptr, ptr %MEMORY, align 8
+  %qword.i = getelementptr inbounds %struct.State, ptr %state, i64 0, i32 0, i32 3, i32 65, i32 0, i32 0
+  store i64 %4, ptr %qword.i, align 16
+  store i64 %4, ptr %NEXT_PC, align 8
+  store ptr %5, ptr %MEMORY, align 8
+  %6 = load i64, ptr %NEXT_PC, align 8
+  store i64 %6, ptr %PC, align 8
+  %7 = load ptr, ptr %MEMORY, align 8
+  %8 = load i64, ptr %PC, align 8
+  ret void
+}
+
+; Function Attrs: noduplicate noinline nounwind optnone
+declare dso_local ptr @__remill_function_return(ptr noundef nonnull align 1, i64 noundef, ptr noundef) #0
+
+attributes #0 = { noduplicate noinline nounwind optnone "frame-pointer"="all" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }

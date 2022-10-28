@@ -7,12 +7,12 @@
 
 /**
  * Translation rules for retdec's capstone2llvmir tool.
- * 
+ *
  * This uses a flattened list of all registers inside
  * the state.
  * Notably, register aliases are repeated separately instead
  * of aliasing properly.
- * 
+ *
  * Memory load/store is done directly by casting the address
  * to a pointer and dereferencing that pointer.
  */
@@ -36,8 +36,64 @@ std::optional<StateReg> discriminateGlobal(std::string nm) {
     }
 }
 
+void capstoneMakeBranchCond(Module& m, GlobalVariable& pc) {
+    Function& f = findFunction(m, "capstone_branch_cond");
+    assert(f.arg_size() == 2);
+
+    Type* ty = pc.getValueType();
+    auto* four = ConstantInt::get(ty, 4);
+
+    auto* bb = BasicBlock::Create(Context, "", &f);
+    auto* sel = SelectInst::Create(
+        f.getArg(0),
+        BinaryOperator::Create(Instruction::BinaryOps::Sub, f.getArg(1), four, "", bb),
+        new LoadInst(ty, &pc, "", bb),
+        "", bb);
+    new StoreInst(sel, &pc, bb);
+    ReturnInst::Create(Context, bb);
+}
+
+void capstoneMakeBranch(Module& m, GlobalVariable& pc) {
+    Function& f = findFunction(m, "capstone_branch");
+    assert(f.arg_size() == 1);
+
+    Type* ty = pc.getValueType();
+
+    auto* bb = BasicBlock::Create(Context, "", &f);
+    auto* tru = ConstantInt::getTrue(Context);
+
+    Function& cond = findFunction(m, "capstone_branch_cond");
+    ArrayRef<Value*> args{tru, f.getArg(0)};
+    auto* call = CallInst::Create(cond.getFunctionType(), &cond, args, "", bb);
+    ReturnInst::Create(Context, bb);
+}
+
+void capstoneMakeReturn(Module& m, GlobalVariable& pc) {
+    Function& f = findFunction(m, "capstone_return");
+    auto* bb = BasicBlock::Create(Context, "", &f);
+
+    // a return is just a branch.
+    Function& cond = findFunction(m, "capstone_branch");
+    auto* call = CallInst::Create(cond.getFunctionType(), &cond, {f.getArg(0)}, "", bb);
+    ReturnInst::Create(Context, bb);
+
+}
+
 void capstone(Module& m) {
     assert(m.getFunctionList().size() > 0);
+
+    if (auto* capVar = m.getNamedGlobal("capstone_asm2llvm")) {
+        std::vector<User*> users (capVar->user_begin(), capVar->user_end());
+        for (auto* user : users) {
+            if (auto* inst = dyn_cast<Instruction>(user)) {
+                errs() << "deleting: " << *inst << '\n';
+                assert(inst->isSafeToRemove());
+                inst->eraseFromParent();
+            }
+        }
+        assert(capVar->getNumUses() == 0);
+        capVar->eraseFromParent();
+    }
 
     Function& f = *m.begin();
     f.setName("main");
@@ -71,7 +127,7 @@ void capstone(Module& m) {
 
             GlobalVariable* glo = m.getNamedGlobal(nm);
             assert(glo != nullptr && "unified global variable not found");
-            
+
             assert(glo->getValueType() == ty);
             assert(cap->getAllocatedType() == ty);
 
@@ -91,20 +147,7 @@ void capstone(Module& m) {
         Instruction::BinaryOps::Add, load, four, "", back);
     new StoreInst(inc, pc, back);
 
-    auto it = std::find_if(m.begin(), m.end(), [](Function& f) { return f.getName() == "capstone_branch_cond"; });
-    assert(it != m.end() && "failed to find capstone_branch_cond function");
-    Function& branchCond = *it;
-    //outs() << branchCond;
-    assert(branchCond.arg_size() == 2);
-
-    auto* bb = BasicBlock::Create(Context, "", &branchCond);
-    auto* sel = SelectInst::Create(
-        branchCond.getArg(0),
-        BinaryOperator::Create(Instruction::BinaryOps::Sub, branchCond.getArg(1), four, "", bb),
-        new LoadInst(ty, pc, "", bb),
-        "", bb);
-    new StoreInst(sel, pc, bb);
-    ReturnInst::Create(Context, bb);
-
-
+    capstoneMakeBranchCond(m, *pc);
+    capstoneMakeBranch(m, *pc);
+    capstoneMakeReturn(m, *pc);
 }

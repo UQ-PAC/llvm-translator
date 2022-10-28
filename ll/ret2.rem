@@ -1,0 +1,28 @@
+; ModuleID = 'll/ret.rem'
+source_filename = "lifted_code"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-pc-linux-gnu-elf"
+
+%struct.State = type { %struct.AArch64State }
+%struct.AArch64State = type { %struct.ArchState, %struct.SIMD, i64, %struct.GPR, i64, %union.anon, %union.anon, %union.anon, i64, %struct.SR, i64 }
+%struct.ArchState = type { i32, i32, %union.anon }
+%struct.SIMD = type { [32 x %union.vec128_t] }
+%union.vec128_t = type { %struct.uint128v1_t }
+%struct.uint128v1_t = type { [1 x i128] }
+%struct.GPR = type { i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg }
+%struct.Reg = type { %union.anon }
+%union.anon = type { i64 }
+%struct.SR = type { i64, %struct.Reg, i64, %struct.Reg, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, [6 x i8] }
+
+define void @sub_0(ptr nonnull noundef %state, i64 %program_counter, ptr nonnull noundef %memory) {
+  %X30 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 61, i32 0, i32 0
+  %PC = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 65, i32 0, i32 0
+  %1 = load i64, ptr %X30, align 8
+  store i64 %1, ptr %PC, align 8
+  ret void
+}
+
+; Function Attrs: noduplicate noinline nounwind optnone
+declare dso_local ptr @__remill_function_return(ptr noundef nonnull align 1, i64 noundef, ptr noundef) #0
+
+attributes #0 = { noduplicate noinline nounwind optnone "frame-pointer"="all" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }

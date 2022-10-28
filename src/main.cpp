@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 
     const char* fname = argc >= 2 ? argv[1] : "/dev/stdin";
 
-    Context.enableOpaquePointers(); // llvm 14 specific 
+    Context.enableOpaquePointers(); // llvm 14 specific
 
     SMDiagnostic Err{};
     std::unique_ptr<Module> ModPtr = parseIRFile(fname, Err, Context);
@@ -51,7 +51,6 @@ int main(int argc, char** argv)
     assert(funcs.size() >= 1);
 
     capstone(Mod);
-    Function& f = funcs.front();
     // internaliseParams(f);
 
     // generateGlobalState(Mod);
@@ -64,6 +63,6 @@ int main(int argc, char** argv)
 
     verifyModule(Mod);
 
-    Mod.print(outs(), nullptr);
+    outs() << Mod;
     return 0;
 }
