@@ -29,7 +29,8 @@ int main(int argc, char** argv)
     }
 
 
-    const char* fname = argc >= 2 ? argv[1] : "/dev/stdin";
+    std::string lifter {argc >= 2 ? argv[1] : ""};
+    const char* fname = argc >= 3 ? argv[2] : "/dev/stdin";
 
     Context.enableOpaquePointers(); // llvm 14 specific
 
@@ -46,11 +47,17 @@ int main(int argc, char** argv)
 
     // outs() << "==============\n";
 
-
     auto& funcs = Mod.getFunctionList();
     assert(funcs.size() >= 1);
 
-    capstone(Mod);
+    if (lifter == "cap") {
+        capstone(Mod);
+    } else if (lifter == "rem") {
+        remill(Mod);
+    } else {
+        errs() << "unsupported lifter, expected cap or rem.\n";
+        return 1;
+    }
     // internaliseParams(f);
 
     // generateGlobalState(Mod);
