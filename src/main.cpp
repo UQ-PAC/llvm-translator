@@ -28,6 +28,11 @@ int main(int argc, char** argv)
         args.emplace_back(argv[i]);
     }
 
+    Module mod{"asdf", Context};
+    // auto* t = FunctionType::get(Type::getVoidTy(Context), {}, false);
+    Function::Create((FunctionType*)1, GlobalValue::LinkageTypes::ExternalLinkage, "func", mod);
+
+    outs() << mod;
 
     std::string lifter {argc >= 2 ? argv[1] : ""};
     const char* fname = argc >= 3 ? argv[2] : "/dev/stdin";

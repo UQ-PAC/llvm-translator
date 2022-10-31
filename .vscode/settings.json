@@ -95,5 +95,9 @@
         "*.inc": "cpp",
         "filesystem": "cpp",
         "stacktrace": "cpp"
+    },
+    "ocaml.sandbox": {
+        "kind": "opam",
+        "switch": "bap"
     }
 }

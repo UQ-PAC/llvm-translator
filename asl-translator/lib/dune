@@ -1,0 +1,6 @@
+(library
+ (name test)
+ (modules translate)
+ (libraries llvm asli.libASL)
+ (flags (:standard -g -ccopt -g -verbose))
+ (ocamlc_flags (-custom)))

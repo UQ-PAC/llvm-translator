@@ -1,0 +1,6 @@
+(executable
+ (public_name test)
+ (name main)
+ (libraries test)
+ (flags (:standard -g -ccopt -g -verbose))
+ )
