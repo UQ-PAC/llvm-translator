@@ -28,18 +28,26 @@ int main(int argc, char** argv)
         args.emplace_back(argv[i]);
     }
 
-    Module mod{"asdf", Context};
-    // auto* t = FunctionType::get(Type::getVoidTy(Context), {}, false);
-    Function::Create((FunctionType*)1, GlobalValue::LinkageTypes::ExternalLinkage, "func", mod);
-
-    outs() << mod;
 
     std::string lifter {argc >= 2 ? argv[1] : ""};
     const char* fname = argc >= 3 ? argv[2] : "/dev/stdin";
 
     Context.enableOpaquePointers(); // llvm 14 specific
 
+    std::function<void(Module&)> translator{};
+
+    if (lifter == "cap") {
+        translator = capstone;
+    } else if (lifter == "rem") {
+        translator = remill;
+    } else {
+        errs() << "unsupported lifter, expected cap or rem.\n";
+        return 1;
+    }
+
+
     SMDiagnostic Err{};
+    errs() << "loading IR file " << fname << '\n';
     std::unique_ptr<Module> ModPtr = parseIRFile(fname, Err, Context);
     if (!ModPtr) {
         Err.print(argv[0], errs());
@@ -47,23 +55,9 @@ int main(int argc, char** argv)
     }
     Module& Mod = *ModPtr;
 
-    // outs() << "==============\n";
-
-
-    // outs() << "==============\n";
-
     auto& funcs = Mod.getFunctionList();
     assert(funcs.size() >= 1);
 
-    if (lifter == "cap") {
-        capstone(Mod);
-    } else if (lifter == "rem") {
-        remill(Mod);
-    } else {
-        errs() << "unsupported lifter, expected cap or rem.\n";
-        return 1;
-    }
-    // internaliseParams(f);
 
     // generateGlobalState(Mod);
 
