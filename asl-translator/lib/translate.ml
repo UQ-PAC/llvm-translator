@@ -8,15 +8,14 @@ let ctx : llcontext = Llvm.global_context ()
 
 let llmodule : llmodule = Llvm_irreader.parse_ir ctx (Llvm.MemoryBuffer.of_file "./lib/state.ll")
 
+let bool_t = i1_type ctx
+let bool_true = const_all_ones bool_t 
+let bool_false = const_null bool_t
 let void_t = void_type ctx
 let void_fun_t : lltype = function_type void_t [| |]
 
 let func : llvalue = define_function "main" void_fun_t llmodule
 (* let entry = entry_block func *)
-
-let translate_prim (nm: string) (tes: expr list) (es: expr list) : llvalue = 
-  match nm,tes,es with 
-  | _ -> assert false
 
 let translate_ty (ty: ty) : lltype = 
   match ty with 
@@ -40,7 +39,28 @@ let lexpr_to_expr = LibASL.Symbolic.lexpr_to_expr unknown_loc
 let expr_to_lexpr = LibASL.Symbolic.expr_to_lexpr
 
 
-let rec translate_expr (exp : expr) (build: llbuilder) : llvalue = 
+let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llbuilder): llvalue = 
+  let err s = failwith @@ "translate_prim: " ^ s ^ " at " ^ pp_expr (Expr_TApply (Ident nm, tes, es)) in
+  match nm,tes,es with 
+  | "add_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    build_add x y "" build
+
+  | "eq_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    build_icmp Icmp.Eq x y "" build
+
+  | "ZeroExtend",_,[x;Expr_LitInt n] -> 
+    let x = translate_expr x build and n = int_of_string n in
+    build_zext x (integer_type ctx n) "" build
+  | "SignExtend",_,[x;Expr_LitInt n] -> 
+    let x = translate_expr x build and n = int_of_string n in
+    build_sext x (integer_type ctx n) "" build
+
+  | _ -> err "unsupported"
+
+
+and translate_expr (exp : expr) (build: llbuilder) : llvalue = 
   let err s = failwith @@ "translate_expr: " ^ s ^ " at " ^ pp_expr exp in
   match exp with 
   | Expr_Slices (base, [Slice_LoWd (Expr_LitInt lo,Expr_LitInt wd)]) ->    
@@ -58,8 +78,8 @@ let rec translate_expr (exp : expr) (build: llbuilder) : llvalue =
       then lshr 
       else build_trunc lshr ty' "" build
   
-  | Expr_Var (Ident "TRUE") -> const_all_ones (i1_type ctx)
-  | Expr_Var (Ident "FALSE") -> const_null (i1_type ctx)
+  | Expr_Var (Ident "TRUE") -> bool_true
+  | Expr_Var (Ident "FALSE") -> bool_false
   
   | Expr_Var _ 
   | Expr_Array _ 
@@ -68,7 +88,7 @@ let rec translate_expr (exp : expr) (build: llbuilder) : llvalue =
     build_load ptr "" build 
 
   | Expr_Parens e -> translate_expr e build
-  | Expr_TApply (nm, tes, es) -> translate_prim (ident nm) tes es
+  | Expr_TApply (nm, tes, es) -> translate_prim (ident nm) tes es build
   
   | Expr_LitInt _ -> assert false
   | Expr_LitHex _ -> assert false
@@ -100,11 +120,16 @@ and translate_lexpr (lexp: lexpr) : llvalue =
   in
 
   match lexp with 
+
   | LExpr_Var (Ident "_PC") -> find "PC"
   | LExpr_Var nm -> find (ident nm)
   
   | LExpr_Array (LExpr_Var (Ident "_R"), Expr_LitInt n) -> find ("X"^n)
   | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "nRW") -> find "nRW"
+  | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "N") -> find "NF"
+  | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "Z") -> find "ZF"
+  | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "C") -> find "CF"
+  | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "V") -> find "VF"
 
   | LExpr_Array _
   | LExpr_Wildcard
@@ -128,11 +153,16 @@ and translate_lexpr (lexp: lexpr) : llvalue =
  *)
 type blockpair = llbasicblock * llbasicblock
 
+let link (first: blockpair) (second: blockpair): blockpair = 
+    let (b1, b2) = first in
+    let (rest1, rest2) = second in
+    ignore @@ build_br rest1 (builder_at_end ctx b2);
+    (b1, rest2)
 
-let translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicblock = 
-  let block = append_block ctx "" func in
-  let build = builder_at_end ctx block in
-  let single = (block, block) in
+let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicblock = 
+  let entry = append_block ctx "stmt" func in
+  let build = builder_at_end ctx entry in
+  let single = (entry, entry) in
 
   match stmt with 
   | Stmt_Assert _ -> single
@@ -158,7 +188,22 @@ let translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicblock =
     single
   | Stmt_Throw (_, _) -> assert false
   | Stmt_TCall (_, _, _, _) -> assert false
-  | Stmt_If (_, _, _, _, _) -> assert false
+  | Stmt_If (cond, trues, elses, falses, _) -> 
+    assert (elses = []);
+
+    let cond = translate_expr cond build in
+
+    let t_hd,t_tl = translate_stmts trues in 
+    let f_hd,f_tl = translate_stmts falses in
+
+    ignore @@ build_cond_br cond t_hd f_hd build;
+
+    let exit = append_block ctx "if_merge" func in
+    ignore @@ build_br exit (builder_at_end ctx t_tl);
+    ignore @@ build_br exit (builder_at_end ctx f_tl);
+
+    entry,exit
+    
   
   | Stmt_Unpred _ 
   | Stmt_ConstrainedUnpred _ 
@@ -179,14 +224,8 @@ let translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicblock =
   | Stmt_ProcReturn _ 
   -> failwith @@ "unhandled translate_stmt: " ^ pp_stmt stmt
 
-let link (first: blockpair) (second: blockpair): blockpair = 
-    let (b1, b2) = first in
-    let (rest1, rest2) = second in
-    ignore @@ build_br rest1 (builder_at_end ctx b2);
-    (b1, rest2)
 
-
-let rec translate_stmts (stmts : stmt list) : llbasicblock * llbasicblock = 
+and translate_stmts (stmts : stmt list) : llbasicblock * llbasicblock = 
   match stmts with 
   | [] -> 
     let b = append_block ctx "" func in b,b
@@ -196,26 +235,15 @@ let rec translate_stmts (stmts : stmt list) : llbasicblock * llbasicblock =
     link s' rest'
 
 
-let branchtaken_fix tl : blockpair =
-  let entry_builder = builder_at_end ctx tl in
-
-  let exit = append_block ctx "" func in
-
-  let inc_block = append_block ctx "" func in
-  let inc_build = builder_at_end ctx inc_block in
-
+let branchtaken_fix (build: llbuilder) : unit =
   let pc_ptr = Globals.find "PC" !vars in
-  let pc = build_load pc_ptr "" inc_build in
-  let inc = build_add pc (const_int (type_of pc) 4) "" inc_build in
-  ignore @@ build_store inc pc_ptr inc_build;
-  ignore @@ build_br exit inc_build;
 
   let branchtaken_ptr = Globals.find "__BranchTaken" !vars in
-  let bt = build_load branchtaken_ptr "" entry_builder in
-  ignore @@ build_cond_br bt exit inc_block entry_builder;
-
-  tl, exit
-
+  let bt = build_load branchtaken_ptr "" build in
+  let pc = build_load pc_ptr "" build in
+  let inc = build_add pc (const_int (type_of pc) 4) "" build in
+  let pc' = build_select bt pc inc "" build in
+  ignore @@ build_store pc' pc_ptr build
 
 
 let translate_stmts_entry (stmts: stmt list) = 
@@ -228,15 +256,18 @@ let translate_stmts_entry (stmts: stmt list) =
   let locals = List.to_seq [
     branchtaken;
     build_alloca (integer_type ctx 2) "BTypeNext" entry_builder;
-    build_alloca (i1_type ctx) "nRW" entry_builder;
+    build_alloca bool_t "nRW" entry_builder;
   ]
   in  
   vars := Globals.add_seq (Seq.map (fun x -> (value_name x, x)) locals) !vars;
 
-  let stmts' = translate_stmts stmts in
-  let (hd,tl) = link stmts' (branchtaken_fix (snd stmts')) in
+  ignore @@ build_store bool_false branchtaken entry_builder;
+  let (hd,tl) = translate_stmts stmts in
+
   ignore @@ build_br hd entry_builder;
-  ignore @@ build_ret_void (builder_at_end ctx tl);
+  let tl_builder = builder_at_end ctx tl in
+  branchtaken_fix tl_builder;
+  ignore @@ build_ret_void tl_builder;
 
   hd,tl
   

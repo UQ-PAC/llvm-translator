@@ -58,6 +58,9 @@ int main(int argc, char** argv)
     auto& funcs = Mod.getFunctionList();
     assert(funcs.size() >= 1);
 
+    assert(translator);
+    translator(Mod);
+
 
     // generateGlobalState(Mod);
 
