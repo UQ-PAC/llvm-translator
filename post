@@ -1,3 +1,3 @@
 #!/bin/bash
 
-opt -S -opaque-pointers -passes=inline,gvn,mergereturn,mem2reg,dce,dse,verify
+opt -S -opaque-pointers -passes=inline,mergereturn,gvn,mem2reg,dce,dse,sink,verify

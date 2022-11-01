@@ -14,7 +14,7 @@ target triple = "aarch64-pc-linux-gnu-elf"
 %union.anon = type { i64 }
 %struct.SR = type { i64, %struct.Reg, i64, %struct.Reg, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, [6 x i8] }
 
-define void @sub_0(ptr nonnull noundef %state, i64 %program_counter, ptr nonnull noundef %memory) {
+define ptr @sub_0(ptr noalias %state, i64 %program_counter, ptr noalias %memory) {
   %X30 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 61, i32 0, i32 0
   %BRANCH_TAKEN = alloca i8, align 4
   %RETURN_PC = alloca i64, align 8
@@ -51,7 +51,8 @@ define void @sub_0(ptr nonnull noundef %state, i64 %program_counter, ptr nonnull
   store i64 %6, ptr %PC, align 8
   %7 = load ptr, ptr %MEMORY, align 8
   %8 = load i64, ptr %PC, align 8
-  ret void
+  %9 = tail call ptr @__remill_function_return(ptr %state, i64 %8, ptr %7)
+  ret ptr %9
 }
 
 ; Function Attrs: noduplicate noinline nounwind optnone
