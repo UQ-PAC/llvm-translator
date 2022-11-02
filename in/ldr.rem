@@ -1,0 +1,72 @@
+; ModuleID = 'lifted_code'
+source_filename = "lifted_code"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-pc-linux-gnu-elf"
+
+%struct.State = type { %struct.AArch64State }
+%struct.AArch64State = type { %struct.ArchState, %struct.SIMD, i64, %struct.GPR, i64, %union.anon, %union.anon, %union.anon, i64, %struct.SR, i64 }
+%struct.ArchState = type { i32, i32, %union.anon }
+%struct.SIMD = type { [32 x %union.vec128_t] }
+%union.vec128_t = type { %struct.uint128v1_t }
+%struct.uint128v1_t = type { [1 x i128] }
+%struct.GPR = type { i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg }
+%struct.Reg = type { %union.anon }
+%union.anon = type { i64 }
+%struct.SR = type { i64, %struct.Reg, i64, %struct.Reg, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, [6 x i8] }
+
+define ptr @sub_0(ptr noalias %state, i64 %program_counter, ptr noalias %memory) {
+  %X3 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 7, i32 0, i32 0
+  %X2 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 5, i32 0, i32 0
+  %X1 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 3, i32 0, i32 0
+  %BRANCH_TAKEN = alloca i8, align 4
+  %RETURN_PC = alloca i64, align 8
+  %MONITOR = alloca i64, align 8
+  %STATE = alloca ptr, align 8
+  store ptr %state, ptr %STATE, align 8
+  %MEMORY = alloca ptr, align 8
+  store ptr %memory, ptr %MEMORY, align 8
+  %NEXT_PC = alloca i64, align 8
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  %WZR = alloca i32, align 4
+  store i32 0, ptr %WZR, align 4
+  %XZR = alloca i64, align 8
+  store i64 0, ptr %XZR, align 8
+  %IGNORE_WRITE_TO_WZR = alloca i32, align 4
+  %IGNORE_WRITE_TO_XZR = alloca i64, align 8
+  %SUPPRESS_WRITEBACK = alloca i64, align 8
+  %PC = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 65, i32 0, i32 0
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  br label %1
+
+1:                                                ; preds = %0
+  %2 = load i64, ptr %NEXT_PC, align 8
+  store i64 %2, ptr %PC, align 8
+  %3 = add i64 %2, 4
+  store i64 %3, ptr %NEXT_PC, align 8
+  %4 = load i64, ptr %X2, align 8
+  %5 = load i64, ptr %X3, align 8
+  %6 = load ptr, ptr %MEMORY, align 8
+  %add.i.i = add i64 %5, %4
+  %call.i.i = call i64 @__remill_read_memory_64(ptr noundef %6, i64 noundef %add.i.i) #2
+  store i64 %call.i.i, ptr %X1, align 8
+  store ptr %6, ptr %MEMORY, align 8
+  br label %7
+
+7:                                                ; preds = %1
+  %8 = load i64, ptr %NEXT_PC, align 8
+  store i64 %8, ptr %PC, align 8
+  %9 = load ptr, ptr %MEMORY, align 8
+  %10 = load i64, ptr %PC, align 8
+  %11 = tail call ptr @__remill_missing_block(ptr %state, i64 %10, ptr %9)
+  ret ptr %11
+}
+
+; Function Attrs: mustprogress noduplicate nofree noinline nosync nounwind optnone readnone willreturn
+declare dso_local i64 @__remill_read_memory_64(ptr noundef readnone, i64 noundef) #0
+
+; Function Attrs: noduplicate noinline nounwind optnone
+declare dso_local ptr @__remill_missing_block(ptr noundef nonnull align 1, i64 noundef, ptr noundef) #1
+
+attributes #0 = { mustprogress noduplicate nofree noinline nosync nounwind optnone readnone willreturn "frame-pointer"="none" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }
+attributes #1 = { noduplicate noinline nounwind optnone "frame-pointer"="all" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }
+attributes #2 = { nobuiltin nounwind readnone willreturn "no-builtins" }

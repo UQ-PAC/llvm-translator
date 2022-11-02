@@ -1,0 +1,111 @@
+; ModuleID = 'lifted_code'
+source_filename = "lifted_code"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-pc-linux-gnu-elf"
+
+%struct.State = type { %struct.AArch64State }
+%struct.AArch64State = type { %struct.ArchState, %struct.SIMD, i64, %struct.GPR, i64, %union.anon, %union.anon, %union.anon, i64, %struct.SR, i64 }
+%struct.ArchState = type { i32, i32, %union.anon }
+%struct.SIMD = type { [32 x %union.vec128_t] }
+%union.vec128_t = type { %struct.uint128v1_t }
+%struct.uint128v1_t = type { [1 x i128] }
+%struct.GPR = type { i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg }
+%struct.Reg = type { %union.anon }
+%union.anon = type { i64 }
+%struct.SR = type { i64, %struct.Reg, i64, %struct.Reg, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, [6 x i8] }
+
+define ptr @sub_0(ptr noalias %state, i64 %program_counter, ptr noalias %memory) {
+  %X3 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 7, i32 0, i32 0
+  %X2 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 5, i32 0, i32 0
+  %X1 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 3, i32 0, i32 0
+  %BRANCH_TAKEN = alloca i8, align 4
+  %RETURN_PC = alloca i64, align 8
+  %MONITOR = alloca i64, align 8
+  %STATE = alloca ptr, align 8
+  store ptr %state, ptr %STATE, align 8
+  %MEMORY = alloca ptr, align 8
+  store ptr %memory, ptr %MEMORY, align 8
+  %NEXT_PC = alloca i64, align 8
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  %WZR = alloca i32, align 4
+  store i32 0, ptr %WZR, align 4
+  %XZR = alloca i64, align 8
+  store i64 0, ptr %XZR, align 8
+  %IGNORE_WRITE_TO_WZR = alloca i32, align 4
+  %IGNORE_WRITE_TO_XZR = alloca i64, align 8
+  %SUPPRESS_WRITEBACK = alloca i64, align 8
+  %PC = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 65, i32 0, i32 0
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  br label %1
+
+1:                                                ; preds = %0
+  %2 = load i64, ptr %NEXT_PC, align 8
+  store i64 %2, ptr %PC, align 8
+  %3 = add i64 %2, 4
+  store i64 %3, ptr %NEXT_PC, align 8
+  %4 = load i64, ptr %X2, align 8
+  %5 = load i64, ptr %X3, align 8
+  %6 = load ptr, ptr %MEMORY, align 8
+  %L.sroa.0.0.insert.ext.i.i.i = zext i64 %4 to i128
+  %R.sroa.0.0.insert.ext.i.i.i = zext i64 %5 to i128
+  %L.sroa.0.0.insert.insert.i77.i.i = add nuw nsw i128 %R.sroa.0.0.insert.ext.i.i.i, %L.sroa.0.0.insert.ext.i.i.i
+  %retval.sroa.0.0.extract.trunc.i78.i.i = trunc i128 %L.sroa.0.0.insert.insert.i77.i.i to i64
+  %7 = ashr i64 %4, 63
+  %8 = ashr i64 %5, 63
+  %L.sroa.2.0.insert.ext.i87.i.i = zext i64 %7 to i128
+  %R.sroa.2.0.insert.ext.i.i.i = zext i64 %8 to i128
+  %reass.add.i = add nuw nsw i128 %R.sroa.2.0.insert.ext.i.i.i, %L.sroa.2.0.insert.ext.i87.i.i
+  %reass.mul.i = shl i128 %reass.add.i, 64
+  %L.sroa.0.0.insert.insert.i107.i.i = add i128 %reass.mul.i, %L.sroa.0.0.insert.insert.i77.i.i
+  %cmp.i.i.i = icmp slt i64 %retval.sroa.0.0.extract.trunc.i78.i.i, 0
+  %call1.i.i.i = call zeroext i1 (i1, ...) @__remill_flag_computation_sign(i1 noundef zeroext %cmp.i.i.i, i64 noundef %4, i64 noundef %5, i64 noundef %retval.sroa.0.0.extract.trunc.i78.i.i) #2
+  %conv.i.i = zext i1 %call1.i.i.i to i8
+  %n.i.i = getelementptr inbounds %struct.State, ptr %state, i64 0, i32 0, i32 9, i32 5
+  store i8 %conv.i.i, ptr %n.i.i, align 1
+  %cmp.i114.i.i = icmp eq i64 %retval.sroa.0.0.extract.trunc.i78.i.i, 0
+  %call.i.i.i = call zeroext i1 (i1, ...) @__remill_flag_computation_zero(i1 noundef zeroext %cmp.i114.i.i, i64 noundef %4, i64 noundef %5, i64 noundef %retval.sroa.0.0.extract.trunc.i78.i.i) #2
+  %conv34.i.i = zext i1 %call.i.i.i to i8
+  %z.i.i = getelementptr inbounds %struct.State, ptr %state, i64 0, i32 0, i32 9, i32 7
+  store i8 %conv34.i.i, ptr %z.i.i, align 1
+  %L.sroa.0.0.insert.ext.i115.i.i = and i128 %L.sroa.0.0.insert.insert.i77.i.i, 18446744073709551615
+  %9 = icmp ugt i128 %L.sroa.0.0.insert.insert.i77.i.i, 18446744073709551615
+  %conv41.i.i = zext i1 %9 to i8
+  %c.i.i = getelementptr inbounds %struct.State, ptr %state, i64 0, i32 0, i32 9, i32 9
+  store i8 %conv41.i.i, ptr %c.i.i, align 1
+  %10 = ashr i64 %retval.sroa.0.0.extract.trunc.i78.i.i, 63
+  %L.sroa.2.0.insert.ext.i122.i.i = zext i64 %10 to i128
+  %L.sroa.2.0.insert.shift.i123.i.i = shl nuw i128 %L.sroa.2.0.insert.ext.i122.i.i, 64
+  %L.sroa.0.0.insert.insert.i125.i.i = or i128 %L.sroa.2.0.insert.shift.i123.i.i, %L.sroa.0.0.insert.ext.i115.i.i
+  %cmp.i130.i.i = icmp ne i128 %L.sroa.0.0.insert.insert.i125.i.i, %L.sroa.0.0.insert.insert.i107.i.i
+  %call48.i.i = call zeroext i1 (i1, ...) @__remill_flag_computation_overflow(i1 noundef zeroext %cmp.i130.i.i, i64 noundef %4, i64 noundef %5, i64 noundef %retval.sroa.0.0.extract.trunc.i78.i.i) #2
+  %conv49.i.i = zext i1 %call48.i.i to i8
+  %v.i.i = getelementptr inbounds %struct.State, ptr %state, i64 0, i32 0, i32 9, i32 11
+  store i8 %conv49.i.i, ptr %v.i.i, align 1
+  store i64 %retval.sroa.0.0.extract.trunc.i78.i.i, ptr %X1, align 8
+  store ptr %6, ptr %MEMORY, align 8
+  br label %11
+
+11:                                               ; preds = %1
+  %12 = load i64, ptr %NEXT_PC, align 8
+  store i64 %12, ptr %PC, align 8
+  %13 = load ptr, ptr %MEMORY, align 8
+  %14 = load i64, ptr %PC, align 8
+  %15 = tail call ptr @__remill_missing_block(ptr %state, i64 %14, ptr %13)
+  ret ptr %15
+}
+
+; Function Attrs: mustprogress noduplicate nofree noinline nosync nounwind optnone readnone willreturn
+declare dso_local zeroext i1 @__remill_flag_computation_sign(i1 noundef zeroext, ...) #0
+
+; Function Attrs: mustprogress noduplicate nofree noinline nosync nounwind optnone readnone willreturn
+declare dso_local zeroext i1 @__remill_flag_computation_zero(i1 noundef zeroext, ...) #0
+
+; Function Attrs: mustprogress noduplicate nofree noinline nosync nounwind optnone readnone willreturn
+declare dso_local zeroext i1 @__remill_flag_computation_overflow(i1 noundef zeroext, ...) #0
+
+; Function Attrs: noduplicate noinline nounwind optnone
+declare dso_local ptr @__remill_missing_block(ptr noundef nonnull align 1, i64 noundef, ptr noundef) #1
+
+attributes #0 = { mustprogress noduplicate nofree noinline nosync nounwind optnone readnone willreturn "frame-pointer"="none" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }
+attributes #1 = { noduplicate noinline nounwind optnone "frame-pointer"="all" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }
+attributes #2 = { nobuiltin nounwind readnone willreturn "no-builtins" }
