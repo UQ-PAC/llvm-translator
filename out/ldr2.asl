@@ -1,6 +1,5 @@
-; ModuleID = '<stdin>'
-source_filename = "test"
-target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
+; ModuleID = 'out/ldr.asl'
+source_filename = "/nonexistent.ll"
 
 @X0 = internal global i64 0
 @X1 = internal global i64 0
@@ -74,29 +73,44 @@ target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 define void @main() {
 entry:
-  %0 = load i64, ptr @X30, align 8
-  store i64 %0, ptr @PC, align 8
-  ret void
-}
+  %__BranchTaken = alloca i1, align 1
+  %nRW = alloca i1, align 1
+  %BTypeNext = alloca i2, align 1
+  store i1 false, ptr %__BranchTaken, align 1
+  br label %stmt
 
-declare void @capstone_call(i64)
+stmt:                                             ; preds = %entry
+  %Exp9__6 = alloca i64, align 8
+  %0 = load i64, ptr @X3, align 4
+  store i64 %0, ptr %Exp9__6, align 4
+  br label %stmt1
 
-define void @capstone_return(i64 %0) {
-  %2 = sub i64 %0, 4
-  store i64 %2, ptr @PC, align 8
-  ret void
-}
+stmt1:                                            ; preds = %stmt
+  %Exp17__5 = alloca i64, align 8
+  %1 = load i64, ptr @X2, align 4
+  store i64 %1, ptr %Exp17__5, align 4
+  br label %stmt2
 
-define void @capstone_branch(i64 %0) {
-  %2 = sub i64 %0, 4
-  store i64 %2, ptr @PC, align 8
-  ret void
-}
+stmt2:                                            ; preds = %stmt1
+  %Exp18__5 = alloca i64, align 8
+  %2 = load i64, ptr %Exp17__5, align 4
+  %3 = load i64, ptr %Exp9__6, align 4
+  %4 = add i64 %2, %3
+  %5 = inttoptr i64 %4 to ptr
+  %6 = load i64, ptr %5, align 4
+  store i64 %6, ptr %Exp18__5, align 4
+  br label %stmt3
 
-define void @capstone_branch_cond(i1 %0, i64 %1) {
-  %3 = load i64, ptr @PC, align 8
-  %4 = sub i64 %1, 4
-  %5 = select i1 %0, i64 %4, i64 %3
-  store i64 %5, ptr @PC, align 8
+stmt3:                                            ; preds = %stmt2
+  %7 = load i64, ptr %Exp18__5, align 4
+  store i64 %7, ptr @X1, align 4
+  br label %8
+
+8:                                                ; preds = %stmt3
+  %9 = load i1, ptr %__BranchTaken, align 1
+  %10 = load i64, ptr @PC, align 4
+  %11 = add i64 %10, 4
+  %12 = select i1 %9, i64 %10, i64 %11
+  store i64 %12, ptr @PC, align 4
   ret void
 }

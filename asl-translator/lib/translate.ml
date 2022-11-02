@@ -38,24 +38,41 @@ let unknown_loc = LibASL.Asl_ast.Unknown
 let lexpr_to_expr = LibASL.Symbolic.lexpr_to_expr unknown_loc
 let expr_to_lexpr = LibASL.Symbolic.expr_to_lexpr
 
+(** An intentionally "unusable" llvalue. Returned where a value is required but it is never intended to be read. *)
+let unusable : llvalue = poison (vector_type (integer_type ctx 403 (* forbidden *)) 1)
 
-let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llbuilder): llvalue = 
+
+let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llbuilder): llvalue option = 
   let err s = failwith @@ "translate_prim: " ^ s ^ " at " ^ pp_expr (Expr_TApply (Ident nm, tes, es)) in
   match nm,tes,es with 
   | "add_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
-    build_add x y "" build
+    Some (build_add x y "" build)
 
   | "eq_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
-    build_icmp Icmp.Eq x y "" build
+    Some (build_icmp Icmp.Eq x y "" build)
 
   | "ZeroExtend",_,[x;Expr_LitInt n] -> 
     let x = translate_expr x build and n = int_of_string n in
-    build_zext x (integer_type ctx n) "" build
+    Some (build_zext x (integer_type ctx n) "" build)
   | "SignExtend",_,[x;Expr_LitInt n] -> 
     let x = translate_expr x build and n = int_of_string n in
-    build_sext x (integer_type ctx n) "" build
+    Some (build_sext x (integer_type ctx n) "" build)
+
+  | "Mem.read",_,[addr;Expr_LitInt n;_] -> 
+    let addr = translate_expr addr build and n = int_of_string n in
+    let vty = integer_type ctx (n*8) in
+    let ptr = build_inttoptr addr (pointer_type vty) "" build in
+    Some (build_load ptr "" build)
+
+  | "Mem.set",_,[addr;Expr_LitInt n;_;rv] -> 
+    let addr = translate_expr addr build and n = int_of_string n in
+    let rv = translate_expr rv build in
+    let vty = integer_type ctx (n*8) in
+    let ptr = build_inttoptr addr (pointer_type vty) "" build in
+    ignore @@ build_store rv ptr build;
+    None
 
   | _ -> err "unsupported"
 
@@ -63,6 +80,8 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
 and translate_expr (exp : expr) (build: llbuilder) : llvalue = 
   let err s = failwith @@ "translate_expr: " ^ s ^ " at " ^ pp_expr exp in
   match exp with 
+  | Expr_Parens e -> translate_expr e build
+
   | Expr_Slices (base, [Slice_LoWd (Expr_LitInt lo,Expr_LitInt wd)]) ->    
     let base = translate_expr base build in
     let lo = int_of_string lo and wd = int_of_string wd in
@@ -87,8 +106,10 @@ and translate_expr (exp : expr) (build: llbuilder) : llvalue =
     let ptr = translate_lexpr (expr_to_lexpr exp) in
     build_load ptr "" build 
 
-  | Expr_Parens e -> translate_expr e build
-  | Expr_TApply (nm, tes, es) -> translate_prim (ident nm) tes es build
+  | Expr_TApply (nm, tes, es) -> 
+    (match translate_prim (ident nm) tes es build with 
+    | None -> err "translate_prim returned no value"
+    | Some x -> x)
   
   | Expr_LitInt _ -> assert false
   | Expr_LitHex _ -> assert false
@@ -160,6 +181,7 @@ let link (first: blockpair) (second: blockpair): blockpair =
     (b1, rest2)
 
 let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicblock = 
+  let err s = failwith @@ "translate_stmt: " ^ s ^ " at " ^ pp_stmt stmt in
   let entry = append_block ctx "stmt" func in
   let build = builder_at_end ctx entry in
   let single = (entry, entry) in
@@ -186,25 +208,29 @@ let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicbloc
     let rv = translate_expr rv build in
     ignore @@ build_store rv (translate_lexpr le) build;
     single
-  | Stmt_Throw (_, _) -> assert false
-  | Stmt_TCall (_, _, _, _) -> assert false
+  | Stmt_TCall (f, tes, es, _) -> 
+    (match translate_prim (ident f) tes es build with 
+    | None -> ()
+    | Some _ -> err "translate_prim returned value in statement");
+    single
   | Stmt_If (cond, trues, elses, falses, _) -> 
     assert (elses = []);
-
+    
     let cond = translate_expr cond build in
-
+    
     let t_hd,t_tl = translate_stmts trues in 
     let f_hd,f_tl = translate_stmts falses in
-
+    
     ignore @@ build_cond_br cond t_hd f_hd build;
-
+    
     let exit = append_block ctx "if_merge" func in
-    ignore @@ build_br exit (builder_at_end ctx t_tl);
+      ignore @@ build_br exit (builder_at_end ctx t_tl);
     ignore @@ build_br exit (builder_at_end ctx f_tl);
-
+    
     entry,exit
     
-  
+    
+  | Stmt_Throw (_, _) -> assert false
   | Stmt_Unpred _ 
   | Stmt_ConstrainedUnpred _ 
   | Stmt_ImpDef (_, _) 
@@ -222,13 +248,13 @@ let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicbloc
   | Stmt_Try (_, _, _, _, _) 
   | Stmt_FunReturn (_, _) 
   | Stmt_ProcReturn _ 
-  -> failwith @@ "unhandled translate_stmt: " ^ pp_stmt stmt
+  -> err "unsupported"
 
 
 and translate_stmts (stmts : stmt list) : llbasicblock * llbasicblock = 
   match stmts with 
   | [] -> 
-    let b = append_block ctx "" func in b,b
+    let b = append_block ctx "end" func in b,b
   | s::rest -> 
     let s' = translate_stmt s in 
     let rest' = translate_stmts rest in 
