@@ -62,6 +62,8 @@ StateReg translateStateAccess(Module& m, GetElementPtrInst& gep) {
 
 void replaceRemillStateAccess(Module& m, Function& f) {
   assert(f.arg_size() == 3 && f.getArg(0)->getName() == "state");
+
+  auto& entry = f.getEntryBlock();
   auto* state = f.getArg(0);
   auto* pc = f.getArg(1);
   auto* mem = f.getArg(2);
@@ -99,7 +101,10 @@ void replaceRemillStateAccess(Module& m, Function& f) {
   }
 
   auto* globalpc = m.getNamedGlobal(StateReg{PC}.name());
-  pc->replaceAllUsesWith(globalpc);
+  // remill has a %program_counter argument which is just the initial program counter.
+  auto* pcload = new LoadInst(
+    pc->getType(), globalpc, "program_counter", &*entry.getFirstInsertionPt());
+  pc->replaceAllUsesWith(pcload);
   assert(pc->getNumUses() == 0);
 
   mem->replaceAllUsesWith(UndefValue::get(mem->getType()));
