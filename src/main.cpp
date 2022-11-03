@@ -70,8 +70,13 @@ int main(int argc, char** argv)
     // }
     // Mod.getGlobalList().clear();
 
-    verifyModule(Mod);
 
     outs() << Mod;
+
+    bool err = verifyModule(Mod, &errs());
+    if (err) {
+        errs() << "\n### MODULE VERIFY FAILED ###\n";
+        return -1;
+    }
     return 0;
 }

@@ -26,7 +26,7 @@ add_executable(go src/main.cpp src/state.cpp src/context.cpp
 
 # target_link_libraries(go stdc++_libbacktrace)
 
-target_compile_options(go PRIVATE -g -fsanitize=address)
+target_compile_options(go PRIVATE -g -fsanitize=address -Wall)
 target_link_options(go PRIVATE -g -fsanitize=address)
 
 

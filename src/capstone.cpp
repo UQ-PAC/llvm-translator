@@ -57,14 +57,12 @@ void capstoneMakeBranch(Module& m, GlobalVariable& pc) {
     Function& f = findFunction(m, "capstone_branch");
     assert(f.arg_size() == 1);
 
-    Type* ty = pc.getValueType();
-
     auto* bb = BasicBlock::Create(Context, "", &f);
     auto* tru = ConstantInt::getTrue(Context);
 
     Function& cond = findFunction(m, "capstone_branch_cond");
     ArrayRef<Value*> args{tru, f.getArg(0)};
-    auto* call = CallInst::Create(cond.getFunctionType(), &cond, args, "", bb);
+    CallInst::Create(cond.getFunctionType(), &cond, args, "", bb);
     ReturnInst::Create(Context, bb);
 }
 
@@ -74,7 +72,7 @@ void capstoneMakeReturn(Module& m, GlobalVariable& pc) {
 
     // a return is just a branch.
     Function& cond = findFunction(m, "capstone_branch");
-    auto* call = CallInst::Create(cond.getFunctionType(), &cond, {f.getArg(0)}, "", bb);
+    CallInst::Create(cond.getFunctionType(), &cond, {f.getArg(0)}, "", bb);
     ReturnInst::Create(Context, bb);
 
 }
@@ -83,8 +81,7 @@ void capstone(Module& m) {
     assert(m.getFunctionList().size() > 0);
 
     if (auto* capVar = m.getNamedGlobal("capstone_asm2llvm")) {
-        std::vector<User*> users (capVar->user_begin(), capVar->user_end());
-        for (auto* user : users) {
+        for (auto* user : clone_it(capVar->users())) {
             if (auto* inst = dyn_cast<Instruction>(user)) {
                 errs() << "deleting: " << *inst << '\n';
                 assert(inst->isSafeToRemove());
@@ -99,7 +96,6 @@ void capstone(Module& m) {
     f.setName("main");
     // BasicBlock& entry = newEntryBlock(f);
     assert(!f.empty() && "function empty");
-    Instruction* front = f.getEntryBlock().getFirstNonPHI();
 
     ReturnInst* back = &uniqueReturn(f);
 

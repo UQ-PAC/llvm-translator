@@ -31,18 +31,18 @@ std::vector<GlobalVariable*> generateGlobalState(Module& m) {
     std::vector<StateReg> regs{};
 
     for (int i = 0; i < XS_COUNT; i++) {
-        regs.emplace_back(X, i);
+        regs.push_back({X, i});
     }
     for (int i = 0; i < VS_COUNT; i++) {
-        regs.emplace_back(V, i);
+        regs.push_back({V, i});
     }
 
-    regs.emplace_back(STATUS, 'N');
-    regs.emplace_back(STATUS, 'Z');
-    regs.emplace_back(STATUS, 'C');
-    regs.emplace_back(STATUS, 'V');
+    regs.push_back({STATUS, 'N'});
+    regs.push_back({STATUS, 'Z'});
+    regs.push_back({STATUS, 'C'});
+    regs.push_back({STATUS, 'V'});
 
-    regs.emplace_back(PC);
+    regs.push_back({PC});
 
     std::vector<GlobalVariable*> globals{};
     for (auto& reg : regs) {
@@ -120,17 +120,17 @@ std::string StateReg::name() const {
     std::string prefix;
     std::string suffix;
     auto t = this->type;
-    int n = this->num;
+    auto d = this->data;
 
     if (t == X) {
         prefix = "X";
-        suffix = std::to_string(n);
+        suffix = std::to_string(d.num);
     } else if (t == V) {
         prefix = "V";
-        suffix = std::to_string(n);
+        suffix = std::to_string(d.num);
     } else if (t == STATUS) {
         suffix = "F";
-        prefix = {(char)n};
+        prefix = {d.flag};
     } else if (t == PC) {
         prefix = "PC";
     } else {

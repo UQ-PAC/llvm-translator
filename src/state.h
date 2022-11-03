@@ -1,5 +1,7 @@
 #pragma once 
 
+#include <variant>
+
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Instructions.h"
 
@@ -22,14 +24,38 @@ std::vector<AllocaInst*> internaliseParams(Function& f);
 ReturnInst& uniqueReturn(Function&);
 
 enum StateType {
-    X, V, STATUS, PC
+    X, // data is register num, as unsigned
+    V, // data is register num, as unsigned
+    STATUS, // data is uppercase ascii character, as char
+    PC // data unused
 };
 
 struct StateReg {
     StateType type;
-    int num;
+    union {
+        int num;
+        char flag;
+    } data;
 
     std::string name() const;
     size_t size() const;
     Type* ty() const;
 };
+
+
+template<std::ranges::range T>
+std::vector<std::ranges::range_value_t<T>> clone_it(T&& range) {
+
+    using namespace std::ranges;
+    using V = range_value_t<T>;
+    using I = iterator_t<T>;
+
+    I itbegin = begin(range);
+    I itend = end(range);
+
+    std::vector<V> vec{};
+    for (I i = itbegin; i != itend; i++) {
+        vec.push_back(*i);
+    }
+    return vec;
+}
