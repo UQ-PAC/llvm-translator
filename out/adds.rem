@@ -1,0 +1,128 @@
+; ModuleID = '<stdin>'
+source_filename = "lifted_code"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+
+@X0 = global i64 0
+@X1 = global i64 0
+@X2 = global i64 0
+@X3 = global i64 0
+@X4 = global i64 0
+@X5 = global i64 0
+@X6 = global i64 0
+@X7 = global i64 0
+@X8 = global i64 0
+@X9 = global i64 0
+@X10 = global i64 0
+@X11 = global i64 0
+@X12 = global i64 0
+@X13 = global i64 0
+@X14 = global i64 0
+@X15 = global i64 0
+@X16 = global i64 0
+@X17 = global i64 0
+@X18 = global i64 0
+@X19 = global i64 0
+@X20 = global i64 0
+@X21 = global i64 0
+@X22 = global i64 0
+@X23 = global i64 0
+@X24 = global i64 0
+@X25 = global i64 0
+@X26 = global i64 0
+@X27 = global i64 0
+@X28 = global i64 0
+@X29 = global i64 0
+@X30 = global i64 0
+@X31 = global i64 0
+@V0 = global i128 0
+@V1 = global i128 0
+@V2 = global i128 0
+@V3 = global i128 0
+@V4 = global i128 0
+@V5 = global i128 0
+@V6 = global i128 0
+@V7 = global i128 0
+@V8 = global i128 0
+@V9 = global i128 0
+@V10 = global i128 0
+@V11 = global i128 0
+@V12 = global i128 0
+@V13 = global i128 0
+@V14 = global i128 0
+@V15 = global i128 0
+@V16 = global i128 0
+@V17 = global i128 0
+@V18 = global i128 0
+@V19 = global i128 0
+@V20 = global i128 0
+@V21 = global i128 0
+@V22 = global i128 0
+@V23 = global i128 0
+@V24 = global i128 0
+@V25 = global i128 0
+@V26 = global i128 0
+@V27 = global i128 0
+@V28 = global i128 0
+@V29 = global i128 0
+@V30 = global i128 0
+@V31 = global i128 0
+@NF = global i1 false
+@ZF = global i1 false
+@CF = global i1 false
+@VF = global i1 false
+@PC = global i64 0
+
+; Function Attrs: alwaysinline
+declare ptr @sub_0(ptr noalias, i64, ptr noalias) #0
+
+; Function Attrs: alwaysinline mustprogress noduplicate nofree nosync nounwind readnone willreturn
+declare dso_local zeroext i1 @__remill_flag_computation_sign(i1 noundef zeroext, ...) #1
+
+; Function Attrs: alwaysinline mustprogress noduplicate nofree nosync nounwind readnone willreturn
+declare dso_local zeroext i1 @__remill_flag_computation_zero(i1 noundef zeroext, ...) #1
+
+; Function Attrs: alwaysinline mustprogress noduplicate nofree nosync nounwind readnone willreturn
+declare dso_local zeroext i1 @__remill_flag_computation_overflow(i1 noundef zeroext, ...) #1
+
+; Function Attrs: alwaysinline noduplicate nounwind
+declare dso_local ptr @__remill_missing_block(ptr noundef nonnull align 1, i64 noundef, ptr noundef) #2
+
+define void @root() {
+  %1 = load i64, ptr @X2, align 8
+  %2 = load i64, ptr @X3, align 8
+  %L.sroa.0.0.insert.ext.i.i.i = zext i64 %1 to i128
+  %R.sroa.0.0.insert.ext.i.i.i = zext i64 %2 to i128
+  %L.sroa.0.0.insert.insert.i77.i.i = add nuw nsw i128 %R.sroa.0.0.insert.ext.i.i.i, %L.sroa.0.0.insert.ext.i.i.i
+  %retval.sroa.0.0.extract.trunc.i78.i.i = trunc i128 %L.sroa.0.0.insert.insert.i77.i.i to i64
+  %3 = ashr i64 %1, 63
+  %4 = ashr i64 %2, 63
+  %L.sroa.2.0.insert.ext.i87.i.i = zext i64 %3 to i128
+  %R.sroa.2.0.insert.ext.i.i.i = zext i64 %4 to i128
+  %reass.add.i = add nuw nsw i128 %R.sroa.2.0.insert.ext.i.i.i, %L.sroa.2.0.insert.ext.i87.i.i
+  %reass.mul.i = shl i128 %reass.add.i, 64
+  %L.sroa.0.0.insert.insert.i107.i.i = add i128 %reass.mul.i, %L.sroa.0.0.insert.insert.i77.i.i
+  %cmp.i.i.i = icmp slt i64 %retval.sroa.0.0.extract.trunc.i78.i.i, 0
+  %conv.i.i = zext i1 %cmp.i.i.i to i8
+  store i8 %conv.i.i, ptr @NF, align 1
+  %cmp.i114.i.i = icmp eq i64 %retval.sroa.0.0.extract.trunc.i78.i.i, 0
+  %conv34.i.i = zext i1 %cmp.i114.i.i to i8
+  store i8 %conv34.i.i, ptr @ZF, align 1
+  %L.sroa.0.0.insert.ext.i115.i.i = and i128 %L.sroa.0.0.insert.insert.i77.i.i, 18446744073709551615
+  %5 = icmp ugt i128 %L.sroa.0.0.insert.insert.i77.i.i, 18446744073709551615
+  %conv41.i.i = zext i1 %5 to i8
+  store i8 %conv41.i.i, ptr @CF, align 1
+  %6 = ashr i64 %retval.sroa.0.0.extract.trunc.i78.i.i, 63
+  %L.sroa.2.0.insert.ext.i122.i.i = zext i64 %6 to i128
+  %L.sroa.2.0.insert.shift.i123.i.i = shl nuw i128 %L.sroa.2.0.insert.ext.i122.i.i, 64
+  %L.sroa.0.0.insert.insert.i125.i.i = or i128 %L.sroa.2.0.insert.shift.i123.i.i, %L.sroa.0.0.insert.ext.i115.i.i
+  %cmp.i130.i.i = icmp ne i128 %L.sroa.0.0.insert.insert.i125.i.i, %L.sroa.0.0.insert.insert.i107.i.i
+  %conv49.i.i = zext i1 %cmp.i130.i.i to i8
+  store i8 %conv49.i.i, ptr @VF, align 1
+  store i64 %retval.sroa.0.0.extract.trunc.i78.i.i, ptr @X1, align 8
+  store i64 add (i64 ptrtoint (ptr @PC to i64), i64 4), ptr @PC, align 8
+  ret void
+}
+
+attributes #0 = { alwaysinline }
+attributes #1 = { alwaysinline mustprogress noduplicate nofree nosync nounwind readnone willreturn "frame-pointer"="none" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }
+attributes #2 = { alwaysinline noduplicate nounwind "frame-pointer"="all" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }

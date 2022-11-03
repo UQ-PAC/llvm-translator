@@ -15,7 +15,9 @@ using namespace llvm;
  * pc
  */
 
-Function& findFunction(Module& m, std::string const& name);
+extern const std::string entry_function_name; 
+
+Function* findFunction(Module& m, std::string const& name);
 std::vector<GlobalVariable*> generateGlobalState(Module& m);
 
 BasicBlock& newEntryBlock(Function& f);

@@ -66,7 +66,7 @@ void replaceRemillStateAccess(Module& m, Function& f) {
   auto* pc = f.getArg(1);
   auto* mem = f.getArg(2);
   
-  for (auto* u : std::vector<User*> {state->user_begin(), state->user_end()}) {
+  for (auto* u : clone_it(state->users())) {
     StoreInst* store; 
     CallInst* call;
 
@@ -103,16 +103,36 @@ void replaceRemillStateAccess(Module& m, Function& f) {
   assert(pc->getNumUses() == 0);
 
   mem->replaceAllUsesWith(UndefValue::get(mem->getType()));
+
+  // for (auto* u : clone_it(mem->users())) {
+  //   if (auto* inst = dyn_cast<Instruction>(u)) {
+  //     inst->eraseFromParent();
+  //   }
+  // }
+
+  // for (Instruction& inst : f.getEntryBlock()) {
+  //   AllocaInst* alloc;
+  //   if ((alloc = dyn_cast<AllocaInst>(&inst)) && inst.getName() == "MEMORY") {
+
+  //     for (User* u : clone_it(alloc->users())) { 
+  //       cast<Instruction>(u)->eraseFromParent();
+  //     }
+
+  //   }
+
+  // }
+
 }
 
 void replaceRemillTailCall(Module& m, Function& f) {
-  Function& missing_block = findFunction(m, "__remill_missing_block");
+  Function* missing_block = findFunction(m, "__remill_missing_block");
+  assert(missing_block);
 
   // ReturnInst::Create(Context, UndefValue::get(PointerType::get(Context, 0)), 
   //   BasicBlock::Create(Context, "", &missing_block));
-  assert(missing_block.getNumUses() == 1);
+  assert(missing_block->getNumUses() == 1);
 
-  auto* call = cast<CallInst>(*missing_block.user_begin());
+  auto* call = cast<CallInst>(*missing_block->user_begin());
   assert(call->getNumUses() == 1);
   auto* ret = cast<ReturnInst>(*call->user_begin());
 
@@ -133,7 +153,7 @@ Function* replaceRemillFunctionSignature(Module& m, Function& f) {
 
   Function* f2 = Function::Create(
     FunctionType::get(Type::getVoidTy(Context), false),
-    f.getLinkage(), "main", m
+    f.getLinkage(), entry_function_name, m
   );
 
   for (auto* bb : blocks) {
@@ -147,6 +167,8 @@ Function* replaceRemillFunctionSignature(Module& m, Function& f) {
 }
 
 void remill(Module& m) {
+  m.setTargetTriple("");
+
   std::vector<std::string> flag_funcs = {
     "__remill_flag_computation_sign",
     "__remill_flag_computation_zero",
@@ -154,8 +176,9 @@ void remill(Module& m) {
   };
 
   for (auto& nm : flag_funcs) {
-    Function& f = findFunction(m, nm);
-    for (auto* u : clone_it(f.users())) {
+    Function* f = findFunction(m, nm);
+    if (!f) continue;
+    for (auto* u : clone_it(f->users())) {
       // errs() << "USER: " << *u << '\n';
       if (auto* call = dyn_cast<CallInst>(u)) {
         call->replaceAllUsesWith(call->getArgOperand(0));

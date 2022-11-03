@@ -37,7 +37,7 @@ std::optional<StateReg> discriminateGlobal(std::string nm) {
 }
 
 void capstoneMakeBranchCond(Module& m, GlobalVariable& pc) {
-    Function& f = findFunction(m, "capstone_branch_cond");
+    Function& f = *findFunction(m, "capstone_branch_cond");
     assert(f.arg_size() == 2);
 
     Type* ty = pc.getValueType();
@@ -54,24 +54,24 @@ void capstoneMakeBranchCond(Module& m, GlobalVariable& pc) {
 }
 
 void capstoneMakeBranch(Module& m, GlobalVariable& pc) {
-    Function& f = findFunction(m, "capstone_branch");
+    Function& f = *findFunction(m, "capstone_branch");
     assert(f.arg_size() == 1);
 
     auto* bb = BasicBlock::Create(Context, "", &f);
     auto* tru = ConstantInt::getTrue(Context);
 
-    Function& cond = findFunction(m, "capstone_branch_cond");
+    Function& cond = *findFunction(m, "capstone_branch_cond");
     ArrayRef<Value*> args{tru, f.getArg(0)};
     CallInst::Create(cond.getFunctionType(), &cond, args, "", bb);
     ReturnInst::Create(Context, bb);
 }
 
 void capstoneMakeReturn(Module& m, GlobalVariable& pc) {
-    Function& f = findFunction(m, "capstone_return");
+    Function& f = *findFunction(m, "capstone_return");
     auto* bb = BasicBlock::Create(Context, "", &f);
 
     // a return is just a branch.
-    Function& cond = findFunction(m, "capstone_branch");
+    Function& cond = *findFunction(m, "capstone_branch");
     CallInst::Create(cond.getFunctionType(), &cond, {f.getArg(0)}, "", bb);
     ReturnInst::Create(Context, bb);
 
@@ -93,7 +93,7 @@ void capstone(Module& m) {
     }
 
     Function& f = *m.begin();
-    f.setName("main");
+    f.setName(entry_function_name);
     // BasicBlock& entry = newEntryBlock(f);
     assert(!f.empty() && "function empty");
 
