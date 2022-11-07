@@ -76,41 +76,41 @@ entry:
   %__BranchTaken = alloca i1, align 1
   %nRW = alloca i1, align 1
   %BTypeNext = alloca i2, align 1
-  store i1 false, i1* %__BranchTaken, align 1
+  store i1 false, ptr %__BranchTaken, align 1
   br label %stmt
 
 stmt:                                             ; preds = %entry
   %Exp9__6 = alloca i64, align 8
-  %0 = load i64, i64* @X3, align 4
-  store i64 %0, i64* %Exp9__6, align 4
+  %0 = load i64, ptr @X3, align 4
+  store i64 %0, ptr %Exp9__6, align 4
   br label %stmt1
 
 stmt1:                                            ; preds = %stmt
   %Exp17__5 = alloca i64, align 8
-  %1 = load i64, i64* @X2, align 4
-  store i64 %1, i64* %Exp17__5, align 4
+  %1 = load i64, ptr @X2, align 4
+  store i64 %1, ptr %Exp17__5, align 4
   br label %stmt2
 
 stmt2:                                            ; preds = %stmt1
   %Exp18__5 = alloca i64, align 8
-  %2 = load i64, i64* %Exp17__5, align 4
-  %3 = load i64, i64* %Exp9__6, align 4
+  %2 = load i64, ptr %Exp17__5, align 4
+  %3 = load i64, ptr %Exp9__6, align 4
   %4 = add i64 %2, %3
-  %5 = inttoptr i64 %4 to i64*
-  %6 = load i64, i64* %5, align 4
-  store i64 %6, i64* %Exp18__5, align 4
+  %5 = inttoptr i64 %4 to ptr
+  %6 = load i64, ptr %5, align 4
+  store i64 %6, ptr %Exp18__5, align 4
   br label %stmt3
 
 stmt3:                                            ; preds = %stmt2
-  %7 = load i64, i64* %Exp18__5, align 4
-  store i64 %7, i64* @X1, align 4
+  %7 = load i64, ptr %Exp18__5, align 4
+  store i64 %7, ptr @X1, align 4
   br label %8
 
 8:                                                ; preds = %stmt3
-  %9 = load i1, i1* %__BranchTaken, align 1
-  %10 = load i64, i64* @PC, align 4
+  %9 = load i1, ptr %__BranchTaken, align 1
+  %10 = load i64, ptr @PC, align 4
   %11 = add i64 %10, 4
   %12 = select i1 %9, i64 %10, i64 %11
-  store i64 %12, i64* @PC, align 4
+  store i64 %12, ptr @PC, align 4
   ret void
 }

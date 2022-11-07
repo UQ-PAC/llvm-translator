@@ -1,0 +1,91 @@
+; ModuleID = 'lifted_code'
+source_filename = "lifted_code"
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
+target triple = "aarch64-pc-linux-gnu-elf"
+
+%struct.State = type { %struct.AArch64State }
+%struct.AArch64State = type { %struct.ArchState, %struct.SIMD, i64, %struct.GPR, i64, %union.anon, %union.anon, %union.anon, i64, %struct.SR, i64 }
+%struct.ArchState = type { i32, i32, %union.anon }
+%struct.SIMD = type { [32 x %union.vec128_t] }
+%union.vec128_t = type { %struct.uint128v1_t }
+%struct.uint128v1_t = type { [1 x i128] }
+%struct.GPR = type { i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg, i64, %struct.Reg }
+%struct.Reg = type { %union.anon }
+%union.anon = type { i64 }
+%struct.SR = type { i64, %struct.Reg, i64, %struct.Reg, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, [6 x i8] }
+
+define ptr @sub_0(ptr noalias %state, i64 %program_counter, ptr noalias %memory) {
+  %Q2 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 1, i32 0, i32 2, i32 0, i32 0, i32 0
+  %Q1 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 1, i32 0, i32 1, i32 0, i32 0, i32 0
+  %V0 = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 1, i32 0, i32 0, i32 0, i32 0, i32 0
+  %BRANCH_TAKEN = alloca i8, align 4
+  %RETURN_PC = alloca i64, align 8
+  %MONITOR = alloca i64, align 8
+  %STATE = alloca ptr, align 8
+  store ptr %state, ptr %STATE, align 8
+  %MEMORY = alloca ptr, align 8
+  store ptr %memory, ptr %MEMORY, align 8
+  %NEXT_PC = alloca i64, align 8
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  %WZR = alloca i32, align 4
+  store i32 0, ptr %WZR, align 4
+  %XZR = alloca i64, align 8
+  store i64 0, ptr %XZR, align 8
+  %IGNORE_WRITE_TO_WZR = alloca i32, align 4
+  %IGNORE_WRITE_TO_XZR = alloca i64, align 8
+  %SUPPRESS_WRITEBACK = alloca i64, align 8
+  %PC = getelementptr inbounds %struct.State, ptr %state, i32 0, i32 0, i32 3, i32 65, i32 0, i32 0
+  store i64 %program_counter, ptr %NEXT_PC, align 8
+  br label %1
+
+1:                                                ; preds = %0
+  %2 = load i64, ptr %NEXT_PC, align 8
+  store i64 %2, ptr %PC, align 8
+  %3 = add i64 %2, 4
+  store i64 %3, ptr %NEXT_PC, align 8
+  %4 = load ptr, ptr %MEMORY, align 8
+  %retval.sroa.0.0.copyload.i.i = load i64, ptr %Q1, align 1
+  %retval.sroa.2.0..sroa_idx.i.i = getelementptr inbounds i8, ptr %Q1, i64 8
+  %retval.sroa.2.0.copyload.i.i = load i64, ptr %retval.sroa.2.0..sroa_idx.i.i, align 1
+  %vec1.sroa.0.sroa.0.0.extract.trunc.i = trunc i64 %retval.sroa.0.0.copyload.i.i to i32
+  %vec1.sroa.0.sroa.4.0.extract.shift.i = lshr i64 %retval.sroa.0.0.copyload.i.i, 32
+  %vec1.sroa.0.sroa.4.0.extract.trunc.i = trunc i64 %vec1.sroa.0.sroa.4.0.extract.shift.i to i32
+  %retval.sroa.0.0.copyload.i26.i = load i64, ptr %Q2, align 1
+  %retval.sroa.2.0..sroa_idx.i27.i = getelementptr inbounds i8, ptr %Q2, i64 8
+  %retval.sroa.2.0.copyload.i29.i = load i64, ptr %retval.sroa.2.0..sroa_idx.i27.i, align 1
+  %vec2.sroa.0.sroa.0.0.extract.trunc.i = trunc i64 %retval.sroa.0.0.copyload.i26.i to i32
+  %vec2.sroa.0.sroa.4.0.extract.shift.i = lshr i64 %retval.sroa.0.0.copyload.i26.i, 32
+  %vec2.sroa.0.sroa.4.0.extract.trunc.i = trunc i64 %vec2.sroa.0.sroa.4.0.extract.shift.i to i32
+  %add.i.i = add i32 %vec2.sroa.0.sroa.0.0.extract.trunc.i, %vec1.sroa.0.sroa.0.0.extract.trunc.i
+  %add.i.1.i = add i32 %vec2.sroa.0.sroa.4.0.extract.trunc.i, %vec1.sroa.0.sroa.4.0.extract.trunc.i
+  %vec1.sroa.5.8.extract.trunc.i = trunc i64 %retval.sroa.2.0.copyload.i.i to i32
+  %vec2.sroa.5.8.extract.trunc.i = trunc i64 %retval.sroa.2.0.copyload.i29.i to i32
+  %add.i.2.i = add i32 %vec2.sroa.5.8.extract.trunc.i, %vec1.sroa.5.8.extract.trunc.i
+  %vec1.sroa.5.12.extract.shift.i = lshr i64 %retval.sroa.2.0.copyload.i.i, 32
+  %vec1.sroa.5.12.extract.trunc.i = trunc i64 %vec1.sroa.5.12.extract.shift.i to i32
+  %vec2.sroa.5.12.extract.shift.i = lshr i64 %retval.sroa.2.0.copyload.i29.i, 32
+  %vec2.sroa.5.12.extract.trunc.i = trunc i64 %vec2.sroa.5.12.extract.shift.i to i32
+  %add.i.3.i = add i32 %vec2.sroa.5.12.extract.trunc.i, %vec1.sroa.5.12.extract.trunc.i
+  store i32 %add.i.i, ptr %V0, align 1
+  %arrayidx2.1.i.i = getelementptr inbounds i8, ptr %V0, i64 4
+  store i32 %add.i.1.i, ptr %arrayidx2.1.i.i, align 1
+  %arrayidx2.2.i.i = getelementptr inbounds i8, ptr %V0, i64 8
+  store i32 %add.i.2.i, ptr %arrayidx2.2.i.i, align 1
+  %arrayidx2.3.i.i = getelementptr inbounds i8, ptr %V0, i64 12
+  store i32 %add.i.3.i, ptr %arrayidx2.3.i.i, align 1
+  store ptr %4, ptr %MEMORY, align 8
+  br label %5
+
+5:                                                ; preds = %1
+  %6 = load i64, ptr %NEXT_PC, align 8
+  store i64 %6, ptr %PC, align 8
+  %7 = load ptr, ptr %MEMORY, align 8
+  %8 = load i64, ptr %PC, align 8
+  %9 = tail call ptr @__remill_missing_block(ptr %state, i64 %8, ptr %7)
+  ret ptr %9
+}
+
+; Function Attrs: noduplicate noinline nounwind optnone
+declare dso_local ptr @__remill_missing_block(ptr noundef nonnull align 1, i64 noundef, ptr noundef) #0
+
+attributes #0 = { noduplicate noinline nounwind optnone "frame-pointer"="all" "no-builtins" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "tune-cpu"="generic" }

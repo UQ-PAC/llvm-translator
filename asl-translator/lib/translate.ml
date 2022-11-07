@@ -11,10 +11,11 @@ let llmodule : llmodule = Llvm_irreader.parse_ir ctx (Llvm.MemoryBuffer.of_file 
 let bool_t = i1_type ctx
 let bool_true = const_all_ones bool_t 
 let bool_false = const_null bool_t
+let i128_t = integer_type ctx 128
 let void_t = void_type ctx
 let void_fun_t : lltype = function_type void_t [| |]
 
-let func : llvalue = define_function "main" void_fun_t llmodule
+let func : llvalue = define_function "root" void_fun_t llmodule
 (* let entry = entry_block func *)
 
 let translate_ty (ty: ty) : lltype = 
@@ -52,6 +53,15 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
   | "eq_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_icmp Icmp.Eq x y "" build)
+
+  | "append_bits",[Expr_LitInt xw; Expr_LitInt yw],[x;y] -> 
+    let xw = int_of_string xw and yw = int_of_string yw in
+    let x = translate_expr x build and y = translate_expr y build in 
+    let t = integer_type ctx (xw + yw) in
+    let x = build_zext_or_bitcast x t "" build in
+    let y = build_zext_or_bitcast y t "" build in
+    let x = build_shl x (const_int t yw) "" build in
+    Some (build_or x y "" build)
 
   | "ZeroExtend",_,[x;Expr_LitInt n] -> 
     let x = translate_expr x build and n = int_of_string n in
@@ -146,6 +156,7 @@ and translate_lexpr (lexp: lexpr) : llvalue =
   | LExpr_Var nm -> find (ident nm)
   
   | LExpr_Array (LExpr_Var (Ident "_R"), Expr_LitInt n) -> find ("X"^n)
+  | LExpr_Array (LExpr_Var (Ident "_Z"), Expr_LitInt n) -> find ("V"^n)
   | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "nRW") -> find "nRW"
   | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "N") -> find "NF"
   | LExpr_Field (LExpr_Var (Ident "PSTATE"), Ident "Z") -> find "ZF"
@@ -206,6 +217,11 @@ let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicbloc
     single
   | Stmt_Assign (le, rv, _) -> 
     let rv = translate_expr rv build in
+    let rv = 
+      (match le with 
+      | LExpr_Field (LExpr_Var (Ident "_Z"), _) ->  build_trunc rv i128_t "" build
+      | _ -> rv)
+    in
     ignore @@ build_store rv (translate_lexpr le) build;
     single
   | Stmt_TCall (f, tes, es, _) -> 

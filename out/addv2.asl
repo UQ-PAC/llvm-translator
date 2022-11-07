@@ -1,4 +1,4 @@
-; ModuleID = './lib/state.ll'
+; ModuleID = '<stdin>'
 source_filename = "/nonexistent.ll"
 
 @X0 = internal global i64 0
@@ -71,47 +71,43 @@ source_filename = "/nonexistent.ll"
 @VF = internal global i1 false
 @PC = internal global i64 0
 
-define void @main() {
+define void @root() {
 entry:
-  %__BranchTaken = alloca i1, align 1
-  %nRW = alloca i1, align 1
-  %BTypeNext = alloca i2, align 1
-  store i1 false, ptr %__BranchTaken, align 1
-  br label %0
-
-0:                                                ; preds = %entry
-  %Exp4__5 = alloca i64, align 8
-  %1 = load i64, ptr @X30, align 4
-  store i64 %1, ptr %Exp4__5, align 4
-  br label %2
-
-2:                                                ; preds = %0
-  store i2 0, ptr %BTypeNext, align 1
-  br label %3
-
-3:                                                ; preds = %2
-  store i1 true, ptr %__BranchTaken, align 1
-  br label %4
-
-4:                                                ; preds = %3
-  %Exp6__6 = alloca i1, align 1
-  %5 = load i1, ptr %nRW, align 1
-  store i1 %5, ptr %Exp6__6, align 1
-  br label %6
-
-6:                                                ; preds = %4
-  br label %7
-
-7:                                                ; preds = %6
-  %8 = load i64, ptr %Exp4__5, align 4
-  store i64 %8, ptr @PC, align 4
-  br label %9
-
-9:                                                ; preds = %7
-  %10 = load i1, ptr %__BranchTaken, align 1
-  %11 = load i64, ptr @PC, align 4
-  %12 = add i64 %11, 4
-  %13 = select i1 %10, i64 %11, i64 %12
-  store i64 %13, ptr @PC, align 4
+  %0 = load i128, i128* @V1, align 4
+  %1 = load i128, i128* @V2, align 4
+  %2 = lshr i128 %0, 96
+  %3 = trunc i128 %2 to i32
+  %4 = lshr i128 %1, 96
+  %5 = trunc i128 %4 to i32
+  %6 = add i32 %3, %5
+  %7 = lshr i128 %0, 64
+  %8 = trunc i128 %7 to i32
+  %9 = lshr i128 %1, 64
+  %10 = trunc i128 %9 to i32
+  %11 = add i32 %8, %10
+  %12 = lshr i128 %0, 32
+  %13 = trunc i128 %12 to i32
+  %14 = lshr i128 %1, 32
+  %15 = trunc i128 %14 to i32
+  %16 = add i32 %13, %15
+  %17 = trunc i128 %0 to i32
+  %18 = trunc i128 %1 to i32
+  %19 = add i32 %17, %18
+  %20 = zext i32 %16 to i64
+  %21 = zext i32 %19 to i64
+  %22 = shl i64 %20, 32
+  %23 = or i64 %22, %21
+  %24 = zext i32 %11 to i96
+  %25 = zext i64 %23 to i96
+  %26 = shl i96 %24, 64
+  %27 = or i96 %26, %25
+  %28 = zext i32 %6 to i128
+  %29 = zext i96 %27 to i128
+  %30 = shl i128 %28, 96
+  %31 = or i128 %30, %29
+  store i128 %31, i128* @V0, align 4
+  %32 = load i64, i64* @PC, align 4
+  %33 = add i64 %32, 4
+  store i64 %33, i64* @PC, align 4
   ret void
 }

@@ -53,6 +53,9 @@ StateReg translateStateAccess(Module& m, GetElementPtrInst& gep) {
       return StateReg{STATUS, flags[i]};
     }
 
+  } else if (len == 8 && matches({0,0,1,0}, {0,0,0})) {
+    int k = indices.at(4);
+    return StateReg{V, k};
   }
 
   errs() << "failed: " << gep << '\n';

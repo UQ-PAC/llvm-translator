@@ -3,8 +3,8 @@
 declare i32 @printf(ptr, ...)
 
 define i32 @main() {
-  store i64 59295976895241433, ptr @X2
-  store i64 581559469347981653, ptr @X3
+  store i64 2917964791673343281, ptr @X2
+  store i64 6305407245181432527, ptr @X3
 
   call void @root()
 
@@ -22,12 +22,12 @@ define i32 @main() {
   %v64 = zext i1 %v to i64
 
 
-  call i32 @printf(ptr @i64format, i64 %x1)
-  call i32 @printf(ptr @i64format, i64 %n64)
-  call i32 @printf(ptr @i64format, i64 %z64)
-  call i32 @printf(ptr @i64format, i64 %c64)
-  call i32 @printf(ptr @i64format, i64 %v64)
-  call i32 @printf(ptr @i64format, i64 %pc)
+  call i32 @printf(ptr @i64format,  i64 %x1)
+  call i32 @printf(ptr @i64format,  i64 %n64)
+  call i32 @printf(ptr @i64format,  i64 %z64)
+  call i32 @printf(ptr @i64format,  i64 %c64)
+  call i32 @printf(ptr @i64format,  i64 %v64)
+  call i32 @printf(ptr @i64format,  i64 %pc)
 
   ret i32 121
 }

@@ -71,47 +71,73 @@ source_filename = "/nonexistent.ll"
 @VF = internal global i1 false
 @PC = internal global i64 0
 
-define void @main() {
+define void @root() {
 entry:
   %__BranchTaken = alloca i1, align 1
   %nRW = alloca i1, align 1
   %BTypeNext = alloca i2, align 1
-  store i1 false, ptr %__BranchTaken, align 1
-  br label %0
+  store i1 false, i1* %__BranchTaken, align 1
+  br label %stmt
 
-0:                                                ; preds = %entry
-  %Exp4__5 = alloca i64, align 8
-  %1 = load i64, ptr @X30, align 4
-  store i64 %1, ptr %Exp4__5, align 4
-  br label %2
+stmt:                                             ; preds = %entry
+  %Exp7__5 = alloca i128, align 8
+  %0 = load i128, i128* @V1, align 4
+  store i128 %0, i128* %Exp7__5, align 4
+  br label %stmt1
 
-2:                                                ; preds = %0
-  store i2 0, ptr %BTypeNext, align 1
-  br label %3
+stmt1:                                            ; preds = %stmt
+  %Exp9__5 = alloca i128, align 8
+  %1 = load i128, i128* @V2, align 4
+  store i128 %1, i128* %Exp9__5, align 4
+  br label %stmt2
 
-3:                                                ; preds = %2
-  store i1 true, ptr %__BranchTaken, align 1
-  br label %4
+stmt2:                                            ; preds = %stmt1
+  %2 = load i128, i128* %Exp7__5, align 4
+  %3 = lshr i128 %2, 96
+  %4 = trunc i128 %3 to i32
+  %5 = load i128, i128* %Exp9__5, align 4
+  %6 = lshr i128 %5, 96
+  %7 = trunc i128 %6 to i32
+  %8 = add i32 %4, %7
+  %9 = load i128, i128* %Exp7__5, align 4
+  %10 = lshr i128 %9, 64
+  %11 = trunc i128 %10 to i32
+  %12 = load i128, i128* %Exp9__5, align 4
+  %13 = lshr i128 %12, 64
+  %14 = trunc i128 %13 to i32
+  %15 = add i32 %11, %14
+  %16 = load i128, i128* %Exp7__5, align 4
+  %17 = lshr i128 %16, 32
+  %18 = trunc i128 %17 to i32
+  %19 = load i128, i128* %Exp9__5, align 4
+  %20 = lshr i128 %19, 32
+  %21 = trunc i128 %20 to i32
+  %22 = add i32 %18, %21
+  %23 = load i128, i128* %Exp7__5, align 4
+  %24 = trunc i128 %23 to i32
+  %25 = load i128, i128* %Exp9__5, align 4
+  %26 = trunc i128 %25 to i32
+  %27 = add i32 %24, %26
+  %28 = zext i32 %22 to i64
+  %29 = zext i32 %27 to i64
+  %30 = shl i64 %28, 32
+  %31 = or i64 %30, %29
+  %32 = zext i32 %15 to i96
+  %33 = zext i64 %31 to i96
+  %34 = shl i96 %32, 64
+  %35 = or i96 %34, %33
+  %36 = zext i32 %8 to i128
+  %37 = zext i96 %35 to i128
+  %38 = shl i128 %36, 96
+  %39 = or i128 %38, %37
+  store i128 %39, i128* @V0, align 4
+  br label %end
 
-4:                                                ; preds = %3
-  %Exp6__6 = alloca i1, align 1
-  %5 = load i1, ptr %nRW, align 1
-  store i1 %5, ptr %Exp6__6, align 1
-  br label %6
-
-6:                                                ; preds = %4
-  br label %7
-
-7:                                                ; preds = %6
-  %8 = load i64, ptr %Exp4__5, align 4
-  store i64 %8, ptr @PC, align 4
-  br label %9
-
-9:                                                ; preds = %7
-  %10 = load i1, ptr %__BranchTaken, align 1
-  %11 = load i64, ptr @PC, align 4
-  %12 = add i64 %11, 4
-  %13 = select i1 %10, i64 %11, i64 %12
-  store i64 %13, ptr @PC, align 4
+end:                                              ; preds = %stmt2
+  %40 = load i1, i1* %__BranchTaken, align 1
+  %41 = load i64, i64* @PC, align 4
+  %42 = add i64 %41, 4
+  %43 = select i1 %40, i64 %41, i64 %42
+  store i64 %43, i64* @PC, align 4
   ret void
 }
