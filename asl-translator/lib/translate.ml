@@ -49,10 +49,63 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
   | "add_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_add x y "" build)
+  | "sub_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_sub x y "" build)
+  | "mul_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_mul x y "" build)
+  | "sdiv_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_sdiv x y "" build)
+
+
+  | "or_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_or x y "" build)
+  | "eor_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_xor x y "" build)
+  | "and_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_and x y "" build)
+
+  | ("not_bits"|"not_bool"),_,[x] -> 
+    let x = translate_expr x build in 
+    Some (build_not x "" build)
 
   | "eq_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_icmp Icmp.Eq x y "" build)
+
+  | "lsl_bits",[_;Expr_LitInt n],[x;_] -> 
+    let x = translate_expr x build and n = int_of_string n in
+    Some (build_shl x (const_int (type_of x) n) "" build)
+  | "lsr_bits",[_;Expr_LitInt n],[x;_] -> 
+    let x = translate_expr x build and n = int_of_string n in
+    Some (build_lshr x (const_int (type_of x) n) "" build)
+  | "asr_bits",[_;Expr_LitInt n],[x;_] -> 
+    let x = translate_expr x build and n = int_of_string n in
+    Some (build_ashr x (const_int (type_of x) n) "" build)
+
+
+
+
+  | "replicate_bits",[Expr_LitInt xw; Expr_LitInt n],[x; _] when int_of_string n >= 1 -> 
+    let x = translate_expr x build in
+    let xw = int_of_string xw and n = int_of_string n in
+    let ty = (integer_type ctx (n * xw)) in
+    let base = build_zext_or_bitcast x ty "" build in
+    let rec go acc i = 
+      if i = n then begin
+        acc
+      end else begin
+        let shl = build_shl base (const_int ty (i * xw)) "" build in
+        let next = build_or shl acc "" build in
+        go next (i+1)
+      end
+    in 
+    Some (go base 1)
 
   | "append_bits",[Expr_LitInt xw; Expr_LitInt yw],[x;y] -> 
     let xw = int_of_string xw and yw = int_of_string yw in

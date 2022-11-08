@@ -134,6 +134,9 @@ void replaceRemillStateAccess(Module& m, Function& f) {
 
 void replaceRemillTailCall(Module& m, Function& f) {
   Function* missing_block = findFunction(m, "__remill_missing_block");
+  if (!missing_block) {
+    missing_block = findFunction(m, "__remill_error");
+  }
   assert(missing_block);
 
   // ReturnInst::Create(Context, UndefValue::get(PointerType::get(Context, 0)), 
