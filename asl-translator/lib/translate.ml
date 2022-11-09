@@ -6,7 +6,8 @@ let a = 2
 
 let ctx : llcontext = Llvm.global_context ()
 
-let llmodule : llmodule = Llvm_irreader.parse_ir ctx (Llvm.MemoryBuffer.of_file "./lib/state.ll")
+let llmodule : llmodule = Llvm_irreader.parse_ir ctx
+  (Llvm.MemoryBuffer.of_file "./lib/state.ll")
 
 let bool_t = i1_type ctx
 let bool_true = const_all_ones bool_t 
@@ -15,7 +16,7 @@ let i128_t = integer_type ctx 128
 let void_t = void_type ctx
 let void_fun_t : lltype = function_type void_t [| |]
 
-let func : llvalue = define_function "root" void_fun_t llmodule
+let func : llvalue = declare_function "root" void_fun_t llmodule
 (* let entry = entry_block func *)
 
 let translate_ty (ty: ty) : lltype = 
@@ -78,15 +79,18 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_icmp Icmp.Eq x y "" build)
 
-  | "lsl_bits",[_;Expr_LitInt n],[x;_] -> 
-    let x = translate_expr x build and n = int_of_string n in
-    Some (build_shl x (const_int (type_of x) n) "" build)
-  | "lsr_bits",[_;Expr_LitInt n],[x;_] -> 
-    let x = translate_expr x build and n = int_of_string n in
-    Some (build_lshr x (const_int (type_of x) n) "" build)
-  | "asr_bits",[_;Expr_LitInt n],[x;_] -> 
-    let x = translate_expr x build and n = int_of_string n in
-    Some (build_ashr x (const_int (type_of x) n) "" build)
+  | "lsl_bits",_,[x;Expr_LitBits n] -> 
+    let x = translate_expr x build in
+    let n = const_int_of_string (type_of x) n 2 in
+    Some (build_shl x n "" build)
+  | "lsr_bits",_,[x;Expr_LitBits n] -> 
+    let x = translate_expr x build in
+    let n = const_int_of_string (type_of x) n 2 in
+    Some (build_lshr x n "" build)
+  | "asr_bits",_,[x;Expr_LitBits n] -> 
+    let x = translate_expr x build in
+    let n = const_int_of_string (type_of x) n 2 in
+    Some (build_ashr x n "" build)
 
 
 
@@ -176,9 +180,9 @@ and translate_expr (exp : expr) (build: llbuilder) : llvalue =
   
   | Expr_LitInt _ -> assert false
   | Expr_LitHex _ -> assert false
-  | Expr_LitBits bits -> 
-    let ty = integer_type ctx (String.length bits) in
-    const_int ty (int_of_string ("0b" ^ bits))
+  | Expr_LitBits str -> 
+    let ty = integer_type ctx (String.length str) in
+    const_int_of_string ty str 2
     
   | Expr_LitReal _ 
   | Expr_LitMask _ 
@@ -344,8 +348,12 @@ let branchtaken_fix (build: llbuilder) : unit =
 let translate_stmts_entry (stmts: stmt list) = 
   vars := fold_left_globals (fun bs g -> Globals.add (value_name g) g bs) Globals.empty llmodule;
 
-  let entry = entry_block func in
+  let entry = append_block ctx "stmts_root" func in
   let entry_builder = builder_at_end ctx entry in
+
+  let oldentry = entry_block func in
+  delete_instruction (Option.get (block_terminator oldentry)) ;
+  ignore @@ build_br entry (builder_at_end ctx oldentry);
 
   let branchtaken = build_alloca (i1_type ctx) "__BranchTaken" entry_builder in
   let locals = List.to_seq [
@@ -363,6 +371,7 @@ let translate_stmts_entry (stmts: stmt list) =
   let tl_builder = builder_at_end ctx tl in
   branchtaken_fix tl_builder;
   ignore @@ build_ret_void tl_builder;
+
 
   hd,tl
   
