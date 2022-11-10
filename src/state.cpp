@@ -28,7 +28,7 @@ GlobalVariable* variable(Module& m, int size, const std::string nm) {
         val, nm);
 }
 
-std::vector<GlobalVariable*> generateGlobalState(Module& m) {
+std::vector<GlobalVariable*> generateGlobalState(Module& m, Function& f) {
 
     std::vector<StateReg> regs{};
 
@@ -52,6 +52,49 @@ std::vector<GlobalVariable*> generateGlobalState(Module& m) {
     }
 
     return globals;
+}
+
+void assumeGlobalsWellDefined(std::vector<GlobalVariable*>& globals) {
+    for (auto* glo : globals) {
+        auto* gloTy = glo->getValueType();
+        auto gloWd = gloTy->getIntegerBitWidth();
+        for (User* u : glo->users()) {
+            if (auto* load = dyn_cast<LoadInst>(u)) {
+                auto* valTy = load->getType(); 
+                unsigned valWd = valTy->getIntegerBitWidth(); 
+
+
+                if (valWd == gloWd) {
+                    // width matches
+                } else if (valWd < gloWd) {
+                    auto* next = load->getNextNode();
+                    auto* load2 = new LoadInst(gloTy, glo, "", next);
+                    auto* trunc = new TruncInst(load2, valTy, "", next);
+                    load->replaceAllUsesWith(trunc);
+                    load = load2;
+                } else {
+                    assert(valWd == gloWd && "attempt to load a value from a smaller register");
+                }
+
+                load->setMetadata("noundef", MDTuple::get(Context, {}));
+            } else if (auto* store = dyn_cast<StoreInst>(u)) {
+                auto* val = store->getValueOperand();
+                auto* valTy = val->getType();
+                unsigned valWd = valTy->getIntegerBitWidth();
+
+                if (valWd == gloWd) {
+                    // widths match
+                } else if (valWd > gloWd) {
+                    store->setOperand(0, new TruncInst(val, gloTy, "", store));
+                } else {
+                    assert(valWd == gloWd && "attempt to store a value in larger global register");
+                }
+            } else {
+                errs() << *u << '\n';
+                assert(0 && "unsupported use of unified global variable");
+            }
+        }
+    }
 }
 
 BasicBlock& newEntryBlock(Function& f) {

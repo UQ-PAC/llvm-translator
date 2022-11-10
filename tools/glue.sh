@@ -6,7 +6,17 @@ ASLI=$HOME/asl-interpreter
 ASL_TRANS=$HOME/llvm-translator/asl-translator
 LLVM_TRANS=$HOME/llvm-translator
 
-# note all opcodes in ASLI little endian hex format.
+CAPSTONE=$HOME/retdec/build/prefix/bin/retdec-capstone2llvmir 
+
+# all opcodes in little endian compressed format
+
+function mnemonic() {
+  op="$1"
+
+  pushd $ASLI > /dev/null
+  scripts/get_mnemonic.sh $op
+  popd > /dev/null
+}
 
 function asli() {
   op="$1"
@@ -30,17 +40,17 @@ function asli() {
 function asl_translate() {
   in=$1
   out=$2
-  pushd $ASL_TRANS
+  pushd $ASL_TRANS > /dev/null
   _build/default/bin/main.exe $in > $out
   x=$?
-  popd
+  popd > /dev/null
   return $x
 }
 
 function capstone() {
   op=$1
   f=$2
-  $HOME/retdec/build/prefix/bin/retdec-capstone2llvmir -a arm64 -b 0x0 -c "$op" -o $f
+  $CAPSTONE -a arm64 -b 0x0 -c "$op" -o $f
   return $?
 }
 
@@ -55,14 +65,24 @@ function llvm_translate() {
   in=$1
   out=$2
   mode=$3
-  pushd $LLVM_TRANS
+  pushd $LLVM_TRANS > /dev/null
   build/go $mode $in > $out
   x=$?
-  popd
+  popd > /dev/null
   return $x
 }
 
 function alive() {
+  a=${op:0:2}
+  b=${op:2:2}
+  c=${op:4:2}
+  d=${op:6:2}
+  hex="0x${d}${c}${b}${a}"
+
+  echo '|' $hex
+  echo '|' $1
+  echo '|' $2
+
   ~/alive2/build/alive-tv --time-verify --smt-stats --bidirectional --disable-undef-input --disable-poison-input $1 $2
 }
 
@@ -72,7 +92,7 @@ function main() {
   d=/tmp/$(date -I)
   mkdir -p $d
 
-  aslb=$d/0x${op:6:2}${op:4:2}${op:2:2}${op:0:2}.aslb
+  aslb=$d/$op.aslb
   aslll=$d/$op.asl.ll
   cap=$d/$op.cap
   rem=$d/$op.rem
@@ -83,6 +103,7 @@ function main() {
   alive=$d/$op.alive.out
 
   # asli $op $aslb 
+  test -f $aslb || { echo "executing ASLI"; asli $op $aslb; }
   test -f $aslb || { echo "$op --> asli fail"; exit 1; }
 
   capstone $op $cap || { echo "$op --> capstone fail"; exit 2; }
@@ -92,12 +113,19 @@ function main() {
   llvm_translate $cap $capll cap  || { echo "$op --> llvm-translator cap fail"; exit 5; }
   llvm_translate $rem $remll rem  || { echo "$op --> llvm-translator rem fail"; exit 6; }
 
+  rm -fv $alive
+  mnemonic $op >> $alive
   alive $capll $aslll >> $alive
   echo ========================================== >> $alive
   alive $remll $aslll >> $alive
-  
+
+  grep --color=auto -E "seems to be correct|equivalent|reverse|doesn't verify|ERROR:|UB triggered|^[|] |^"$'\t' $alive | sed "s/^/$op --> /"
+
+  echo $capll
+  echo $remll 
+  echo $aslll
   echo $alive
-  correct=$(grep '1 correct transformation' $alive | wc -l)
+  correct=$(grep 'seems to be equivalent' $alive | wc -l)
   [[ $correct == 2 ]] || exit 100
 }
 

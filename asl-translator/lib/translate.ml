@@ -33,7 +33,7 @@ let translate_ty (ty: ty) : lltype =
 let ident = function | Ident x | FIdent (x,_) -> x
 
 module Globals = Map.Make(String)
-let vars : llvalue Globals.t ref = ref Globals.empty
+let vars : (bool * llvalue) Globals.t ref = ref Globals.empty
 
 
 let unknown_loc = LibASL.Asl_ast.Unknown
@@ -170,8 +170,13 @@ and translate_expr (exp : expr) (build: llbuilder) : llvalue =
   | Expr_Var _ 
   | Expr_Array _ 
   | Expr_Field (_, _) -> 
-    let ptr = translate_lexpr (expr_to_lexpr exp) in
-    build_load ptr "" build 
+    let is_global,ptr = translate_lexpr (expr_to_lexpr exp) in
+    let load = build_load ptr "" build in
+    if is_global then
+      set_metadata load (mdkind_id ctx "noundef") (mdnode ctx [||])
+    else 
+      ();
+    load
 
   | Expr_TApply (nm, tes, es) -> 
     (match translate_prim (ident nm) tes es build with 
@@ -200,7 +205,7 @@ and translate_expr (exp : expr) (build: llbuilder) : llvalue =
   -> err "unsupported expression"
 
 
-and translate_lexpr (lexp: lexpr) : llvalue = 
+and translate_lexpr (lexp: lexpr) : bool * llvalue = 
   let err s = failwith @@ "translate_lexpr: " ^ s ^ " at " ^ pp_lexpr lexp in
   let find nm = 
     try Globals.find nm !vars 
@@ -260,7 +265,7 @@ let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicbloc
     let ty = translate_ty ty in
     List.iter (fun nm -> 
       let alloc = build_alloca ty (ident nm) build in
-      vars := Globals.add (ident nm) alloc !vars;
+      vars := Globals.add (ident nm) (false, alloc) !vars;
     ) nms;
     single
 
@@ -270,7 +275,7 @@ let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicbloc
     let alloc = build_alloca ty (ident nm) build in
     ignore @@ build_store (translate_expr rv build) alloc build;
 
-    vars := Globals.add (ident nm) alloc !vars;
+    vars := Globals.add (ident nm) (false, alloc) !vars;
     single
   | Stmt_Assign (le, rv, _) -> 
     let rv = translate_expr rv build in
@@ -279,7 +284,7 @@ let rec translate_stmt (stmt : LibASL.Asl_ast.stmt) : llbasicblock * llbasicbloc
       | LExpr_Field (LExpr_Var (Ident "_Z"), _) ->  build_trunc rv i128_t "" build
       | _ -> rv)
     in
-    ignore @@ build_store rv (translate_lexpr le) build;
+    ignore @@ build_store rv (snd (translate_lexpr le)) build;
     single
   | Stmt_TCall (f, tes, es, _) -> 
     (match translate_prim (ident f) tes es build with 
@@ -335,18 +340,19 @@ and translate_stmts (stmts : stmt list) : llbasicblock * llbasicblock =
 
 
 let branchtaken_fix (build: llbuilder) : unit =
-  let pc_ptr = Globals.find "PC" !vars in
+  let (_,pc_ptr) = Globals.find "PC" !vars in
 
-  let branchtaken_ptr = Globals.find "__BranchTaken" !vars in
-  let bt = build_load branchtaken_ptr "" build in
-  let pc = build_load pc_ptr "" build in
+  let bt = translate_expr (Expr_Var (Ident "__BranchTaken")) build in
+  let pc = translate_expr (Expr_Var (Ident "PC")) build in
   let inc = build_add pc (const_int (type_of pc) 4) "" build in
   let pc' = build_select bt pc inc "" build in
   ignore @@ build_store pc' pc_ptr build
 
 
 let translate_stmts_entry (stmts: stmt list) = 
-  vars := fold_left_globals (fun bs g -> Globals.add (value_name g) g bs) Globals.empty llmodule;
+  vars := fold_left_globals 
+    (fun bs g -> Globals.add (value_name g) (true,g) bs) 
+    Globals.empty llmodule;
 
   let entry = append_block ctx "stmts_root" func in
   let entry_builder = builder_at_end ctx entry in
@@ -362,7 +368,7 @@ let translate_stmts_entry (stmts: stmt list) =
     build_alloca bool_t "nRW" entry_builder;
   ]
   in  
-  vars := Globals.add_seq (Seq.map (fun x -> (value_name x, x)) locals) !vars;
+  vars := Globals.add_seq (Seq.map (fun x -> (value_name x, (false,x))) locals) !vars;
 
   ignore @@ build_store bool_false branchtaken entry_builder;
   let (hd,tl) = translate_stmts stmts in

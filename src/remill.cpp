@@ -207,10 +207,12 @@ void remill(Module& m) {
 
   Function* root = &*m.begin();
   
-  generateGlobalState(m);
+  auto globals = generateGlobalState(m, *root);
 
   replaceRemillTailCall(m, *root);
   replaceRemillStateAccess(m, *root);
+
+  assumeGlobalsWellDefined(globals);
 
   root = replaceRemillFunctionSignature(m, *root);
 }

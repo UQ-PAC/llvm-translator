@@ -18,7 +18,8 @@ using namespace llvm;
 extern const std::string entry_function_name; 
 
 Function* findFunction(Module& m, std::string const& name);
-std::vector<GlobalVariable*> generateGlobalState(Module& m);
+std::vector<GlobalVariable*> generateGlobalState(Module& m, Function& f);
+void assumeGlobalsWellDefined(std::vector<GlobalVariable*>& globals);
 
 BasicBlock& newEntryBlock(Function& f);
 std::vector<AllocaInst*> internaliseGlobals(Module& module, Function& f);

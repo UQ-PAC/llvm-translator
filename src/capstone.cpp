@@ -100,7 +100,7 @@ void capstone(Module& m) {
     ReturnInst* back = &uniqueReturn(f);
 
     auto capstone = internaliseGlobals(m, f);
-    auto unified = generateGlobalState(m);
+    auto unified = generateGlobalState(m, f);
 
     // here, cap refers to the capstone-specific variable
     // glo is the allocated global
@@ -134,6 +134,7 @@ void capstone(Module& m) {
         }
     }
 
+
     GlobalVariable* pc = m.getNamedGlobal("PC");
     assert(pc);
     Type* ty = pc->getValueType();
@@ -143,7 +144,10 @@ void capstone(Module& m) {
         Instruction::BinaryOps::Add, load, four, "", back);
     new StoreInst(inc, pc, back);
 
+
     capstoneMakeBranchCond(m, *pc);
     capstoneMakeBranch(m, *pc);
     capstoneMakeReturn(m, *pc);
+
+    assumeGlobalsWellDefined(unified);
 }
