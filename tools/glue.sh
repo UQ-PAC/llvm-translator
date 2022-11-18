@@ -97,10 +97,11 @@ function main() {
   mkdir -p $d
 
   aslb=$d/$op.aslb
-  aslll=$d/$op.asl.ll
+  asl=$d/$op.asl
   cap=$d/$op.cap
   rem=$d/$op.rem
 
+  aslll=$d/$op.asl.ll
   capll=$d/$op.cap.ll
   remll=$d/$op.rem.ll
 
@@ -113,9 +114,10 @@ function main() {
   capstone $op $cap || { echo "$op --> capstone fail"; exit 2; }
   remill $op $rem   || { echo "$op --> remill fail"; exit 3; }
 
-  asl_translate $aslb $aslll      || { echo "$op --> asl-translator fail"; exit 4; }
+  asl_translate $aslb $asl        || { echo "$op --> asl-translator fail"; exit 4; }
   llvm_translate $cap $capll cap  || { echo "$op --> llvm-translator cap fail"; exit 5; }
   llvm_translate $rem $remll rem  || { echo "$op --> llvm-translator rem fail"; exit 6; }
+  llvm_translate $asl $aslll asl  || { echo "$op --> llvm-translator asl fail"; exit 7; }
 
   rm -fv $alive
   mnemonic $op >> $alive

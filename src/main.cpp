@@ -39,8 +39,10 @@ int main(int argc, char** argv)
         translator = capstone;
     } else if (lifter == "rem") {
         translator = remill;
+    } else if (lifter == "asl") {
+        translator = asl;
     } else {
-        errs() << "unsupported lifter, expected cap or rem.\n";
+        errs() << "unsupported lifter, expected cap or rem or asl.\n";
         return 1;
     }
 
@@ -59,16 +61,6 @@ int main(int argc, char** argv)
 
     assert(translator);
     translator(Mod);
-
-
-    // generateGlobalState(Mod);
-
-    // after internalising global variables, delete old global declarations.
-    // for (auto& g : Mod.getGlobalList()) {
-    //     assert(g.user_empty());
-    // }
-    // Mod.getGlobalList().clear();
-
 
     outs() << Mod;
 

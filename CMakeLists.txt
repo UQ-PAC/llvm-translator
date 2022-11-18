@@ -22,7 +22,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 
 # add the executable
 add_executable(go src/main.cpp src/state.cpp src/context.cpp
-    src/capstone.cpp src/remill.cpp)
+    src/capstone.cpp src/remill.cpp src/asl.cpp)
 
 # target_link_libraries(go stdc++_libbacktrace)
 
