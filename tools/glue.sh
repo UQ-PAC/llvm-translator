@@ -133,7 +133,7 @@ function main() {
   echo $remll 
   echo $aslll
   echo $alive
-  correct=$(grep 'seems to be equivalent' $alive | wc -l)
+  correct=$(grep 'seem to be equivalent' $alive | wc -l)
   if [[ $correct == 2 ]]; then 
     echo "SUCCESS" | prefix $op
   else
