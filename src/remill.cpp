@@ -161,10 +161,10 @@ void replaceRemillMemory(Module& m, Function& f) {
 
   for (int sz : sizes) {
     std::string name = "__remill_read_memory_" + std::to_string(sz);
-    Function* readfn = findFunction(m, name);
-    if (!readfn) continue;
+    Function* fn = findFunction(m, name);
+    if (!fn) continue;
 
-    for (User* u : clone_it(readfn->users())) {
+    for (User* u : clone_it(fn->users())) {
       CallInst* call = cast<CallInst>(u);
       Value* addr = call->getArgOperand(1);
 
@@ -173,6 +173,24 @@ void replaceRemillMemory(Module& m, Function& f) {
       noundef(load);
 
       call->replaceAllUsesWith(load);
+      call->eraseFromParent();
+    }
+  }
+
+  for (int sz : sizes) {
+    std::string name = "__remill_write_memory_" + std::to_string(sz);
+    Function* fn = findFunction(m, name);
+    if (!fn) continue;
+
+    for (User* u : clone_it(fn->users())) {
+      CallInst* call = cast<CallInst>(u);
+      Value* addr = call->getArgOperand(1);
+      Value* val = call->getArgOperand(2);
+
+      IntToPtrInst* int2ptr = new IntToPtrInst(addr, PointerType::get(Context, 0), "", call);
+      StoreInst* stor = new StoreInst(val, int2ptr, call);
+
+      call->replaceAllUsesWith(PoisonValue::get(call->getType()));
       call->eraseFromParent();
     }
   }
