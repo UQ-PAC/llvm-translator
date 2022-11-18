@@ -28,7 +28,6 @@ int main(int argc, char** argv)
         args.emplace_back(argv[i]);
     }
 
-
     std::string lifter {argc >= 2 ? argv[1] : ""};
     const char* fname = argc >= 3 ? argv[2] : "/dev/stdin";
 

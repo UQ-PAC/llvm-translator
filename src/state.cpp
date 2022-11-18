@@ -1,6 +1,8 @@
 #include "state.h"
 #include "context.h"
 
+#include <map>
+
 using namespace llvm;
 
 const std::string entry_function_name = "root";
@@ -54,7 +56,12 @@ std::vector<GlobalVariable*> generateGlobalState(Module& m, Function& f) {
     return globals;
 }
 
-void assumeGlobalsWellDefined(std::vector<GlobalVariable*>& globals) {
+void noundef(LoadInst* load) {
+    assert(load);
+    load->setMetadata("noundef", MDTuple::get(Context, {}));
+}
+
+void correctGlobalAccesses(std::vector<GlobalVariable*>& globals) {
     for (auto* glo : globals) {
         auto* gloTy = glo->getValueType();
         auto gloWd = gloTy->getIntegerBitWidth();
@@ -76,7 +83,7 @@ void assumeGlobalsWellDefined(std::vector<GlobalVariable*>& globals) {
                     assert(valWd == gloWd && "attempt to load a value from a smaller register");
                 }
 
-                load->setMetadata("noundef", MDTuple::get(Context, {}));
+                noundef(load);
             } else if (auto* store = dyn_cast<StoreInst>(u)) {
                 auto* val = store->getValueOperand();
                 auto* valTy = val->getType();
@@ -96,6 +103,73 @@ void assumeGlobalsWellDefined(std::vector<GlobalVariable*>& globals) {
         }
     }
 }
+
+void correctMemoryAccesses(Module& m, Function& root) {
+  std::initializer_list<int> sizes = { 8, 16, 32, 64 };
+
+  std::map<int, Function*> loads;
+  std::map<int, Function*> stores;
+
+  for (int sz : sizes) {
+    std::string loadName = "load_" + std::to_string(sz);
+    std::string storeName = "store_" + std::to_string(sz);
+
+    Type* i64 = IntegerType::get(Context, 64);
+    Type* valTy = IntegerType::get(Context, sz);
+    FunctionType* loadTy = FunctionType::get(valTy, {i64}, false);
+    FunctionType* storeTy = FunctionType::get(Type::getVoidTy(Context), {i64, valTy}, false);
+
+    Function* load = Function::Create(loadTy,
+      GlobalValue::LinkageTypes::ExternalLinkage, 0, loadName, &m);
+    Function* store = Function::Create(storeTy,
+      GlobalValue::LinkageTypes::ExternalLinkage, 0, storeName, &m);
+
+    for (Function* fn : {load, store}) {
+      using enum Attribute::AttrKind;
+      auto attr = [](Attribute::AttrKind kind) {
+        return Attribute::get(Context, kind);
+      };
+
+      fn->addParamAttr(0, attr(NoUndef));
+      if (!fn->getReturnType()->isVoidTy())
+        fn->addRetAttr(attr(NoUndef));
+      fn->addFnAttr(attr(InaccessibleMemOnly));
+      fn->addFnAttr(attr(WillReturn));
+    }
+
+    loads[sz] = load;
+    stores[sz] = store;
+  }
+
+  for (BasicBlock& bb : root) for (Instruction& inst : bb) {
+    IntToPtrInst* i2p = dyn_cast<IntToPtrInst>(&inst);
+    if (!i2p) continue; 
+    for (User* u : clone_it(i2p->users())) {
+      auto* addr = i2p->getOperand(0);
+      if (auto* load = dyn_cast<LoadInst>(u)) {
+        
+        int sz = load->getType()->getIntegerBitWidth();
+        CallInst* call = CallInst::Create(loads[sz]->getFunctionType(), loads[sz], {addr}, "", load);
+        load->replaceAllUsesWith(call);
+        load->eraseFromParent();
+
+      } else if (auto* stor = dyn_cast<StoreInst>(u)) {
+        auto* val = stor->getValueOperand();
+        int sz = stor->getValueOperand()->getType()->getIntegerBitWidth();
+        CallInst* call = CallInst::Create(stores[sz]->getFunctionType(), stores[sz], {addr, val}, "", stor);
+        stor->replaceAllUsesWith(call);
+        stor->eraseFromParent();
+
+      } else {
+        errs() << *u << '\n';
+        assert(0 && "unsupported use of int2ptr cast");
+      }
+    }
+
+    assert(i2p->isSafeToRemove() && "unable to remove i2p instruction");
+  }
+}
+
 
 BasicBlock& newEntryBlock(Function& f) {
     assertm(!f.empty(), "analysed function must not be empty");

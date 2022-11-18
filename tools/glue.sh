@@ -86,6 +86,10 @@ function alive() {
   ~/alive2/build/alive-tv --time-verify --smt-stats --bidirectional --disable-undef-input --disable-poison-input $1 $2
 }
 
+function prefix() {
+  sed "s/^/$1 --> /"
+}
+
 function main() {
   op=$1
 
@@ -119,14 +123,20 @@ function main() {
   echo ========================================== >> $alive
   alive $remll $aslll >> $alive
 
-  grep --color=auto -E "seems to be correct|equivalent|reverse|doesn't verify|ERROR:|UB triggered|^[|] |^"$'\t' $alive | sed "s/^/$op --> /"
+  grep --color=auto -E \
+    "seems to be correct|equivalent|reverse|doesn't verify|ERROR:|UB triggered|^[|] |^"$'\t' $alive \
+    | prefix $op
 
   echo $capll
   echo $remll 
   echo $aslll
   echo $alive
   correct=$(grep 'seems to be equivalent' $alive | wc -l)
-  [[ $correct == 2 ]] || exit 100
+  if [[ $correct == 2 ]]; then 
+    echo "SUCCESS" | prefix $op
+  else
+    echo "FAIL" | prefix $op
+  fi
 }
 
 main "$@"

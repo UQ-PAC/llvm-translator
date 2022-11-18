@@ -156,6 +156,28 @@ void replaceRemillTailCall(Module& m, Function& f) {
   ReturnInst::Create(Context, retblock);
 }
 
+void replaceRemillMemory(Module& m, Function& f) {
+  std::initializer_list<int> sizes = { 8, 16, 32, 64 };
+
+  for (int sz : sizes) {
+    std::string name = "__remill_read_memory_" + std::to_string(sz);
+    Function* readfn = findFunction(m, name);
+    if (!readfn) continue;
+
+    for (User* u : clone_it(readfn->users())) {
+      CallInst* call = cast<CallInst>(u);
+      Value* addr = call->getArgOperand(1);
+
+      IntToPtrInst* int2ptr = new IntToPtrInst(addr, PointerType::get(Context, 0), "", call);
+      LoadInst* load = new LoadInst(call->getType(), int2ptr, "", call);
+      noundef(load);
+
+      call->replaceAllUsesWith(load);
+      call->eraseFromParent();
+    }
+  }
+}
+
 Function* replaceRemillFunctionSignature(Module& m, Function& f) {
   std::vector<BasicBlock*> blocks;
   for (auto& bb : f) {
@@ -211,8 +233,10 @@ void remill(Module& m) {
 
   replaceRemillTailCall(m, *root);
   replaceRemillStateAccess(m, *root);
+  replaceRemillMemory(m, *root);
 
-  assumeGlobalsWellDefined(globals);
+  correctMemoryAccesses(m, *root);
+  correctGlobalAccesses(globals);
 
   root = replaceRemillFunctionSignature(m, *root);
 }

@@ -149,5 +149,6 @@ void capstone(Module& m) {
     capstoneMakeBranch(m, *pc);
     capstoneMakeReturn(m, *pc);
 
-    assumeGlobalsWellDefined(unified);
+    correctGlobalAccesses(unified);
+    correctMemoryAccesses(m, f);
 }

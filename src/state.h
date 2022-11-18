@@ -19,7 +19,9 @@ extern const std::string entry_function_name;
 
 Function* findFunction(Module& m, std::string const& name);
 std::vector<GlobalVariable*> generateGlobalState(Module& m, Function& f);
-void assumeGlobalsWellDefined(std::vector<GlobalVariable*>& globals);
+void correctGlobalAccesses(std::vector<GlobalVariable*>& globals);
+void correctMemoryAccesses(Module& m, Function& root);
+void noundef(LoadInst*);
 
 BasicBlock& newEntryBlock(Function& f);
 std::vector<AllocaInst*> internaliseGlobals(Module& module, Function& f);
