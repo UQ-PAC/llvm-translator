@@ -80,7 +80,12 @@ void correctGlobalAccesses(std::vector<GlobalVariable*>& globals) {
                     load->replaceAllUsesWith(trunc);
                     load = load2;
                 } else {
-                    assert(valWd == gloWd && "attempt to load a value from a smaller register");
+                    auto* load2 = new LoadInst(gloTy, glo, "", load);
+                    auto* ext = new ZExtInst(load2, load->getType(), "", load);
+                    load->replaceAllUsesWith(ext);
+                    load = load2;
+                    // errs() << *load << " <- " << *glo << '\n';
+                    // assert(valWd == gloWd && "attempt to load a value from a smaller register");
                 }
 
                 noundef(load);
@@ -220,19 +225,24 @@ std::vector<AllocaInst*> internaliseParams(Function& f) {
     return allocs;
 }
 
-ReturnInst& uniqueReturn(Function& f) {
-    // assumes there is exactly one return 
-    ReturnInst* ret = nullptr;
+std::vector<std::reference_wrapper<ReturnInst>> functionReturns(Function& f) {
+    std::vector<std::reference_wrapper<ReturnInst>> rets{};
     for (auto& b : f) {
         for (auto& i : b) {
             if (auto* r = dyn_cast<ReturnInst>(&i)) {
-                assert(ret == nullptr && "multiple returns in function");
-                ret = r;
+                rets.push_back(*r);
             }
         }
     }
-    assert(ret != nullptr && "no returns in function");
-    return *ret;
+
+    return rets;
+}
+
+ReturnInst& uniqueReturn(Function& f) {
+    auto rets = functionReturns(f);
+    assert(rets.size() > 0 && "no returns in function");
+    assert(rets.size() == 1 && "multiple returns in function");
+    return rets[0];
 }
 
 std::string StateReg::name() const {

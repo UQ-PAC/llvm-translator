@@ -1,6 +1,7 @@
 #pragma once 
 
 #include <variant>
+#include <functional>
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Instructions.h"
@@ -27,6 +28,7 @@ BasicBlock& newEntryBlock(Function& f);
 std::vector<AllocaInst*> internaliseGlobals(Module& module, Function& f);
 std::vector<AllocaInst*> internaliseParams(Function& f);
 ReturnInst& uniqueReturn(Function&);
+std::vector<std::reference_wrapper<ReturnInst>> functionReturns(Function&);
 
 enum StateType {
     X, // data is register num, as unsigned

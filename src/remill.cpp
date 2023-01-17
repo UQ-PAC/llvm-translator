@@ -3,6 +3,7 @@
 
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Attributes.h>
+#include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
 
 #include <optional>
 #include <string>
@@ -137,23 +138,27 @@ void replaceRemillTailCall(Module& m, Function& f) {
   if (!missing_block) {
     missing_block = findFunction(m, "__remill_error");
   }
+  if (!missing_block) {
+    missing_block = findFunction(m, "__remill_function_return");
+  }
   assert(missing_block);
 
   // ReturnInst::Create(Context, UndefValue::get(PointerType::get(Context, 0)), 
   //   BasicBlock::Create(Context, "", &missing_block));
-  assert(missing_block->getNumUses() == 1);
+  // assert(missing_block->getNumUses() == 1);
+  for (auto* user : clone_it(missing_block->users())) {
+    if (auto* call = dyn_cast<CallInst>(user)) {
+      call->replaceAllUsesWith(UndefValue::get(call->getType()));
+      call->eraseFromParent();
+    }
+  }
+  
+  // assert(call->getNumUses() == 1);
 
-  auto* call = cast<CallInst>(*missing_block->user_begin());
-  assert(call->getNumUses() == 1);
-  auto* ret = cast<ReturnInst>(*call->user_begin());
-
-  auto* retblock = ret->getParent();
-  assert(retblock->getParent() == &f);
-
-  ret->eraseFromParent();
-  call->eraseFromParent();
-
-  ReturnInst::Create(Context, retblock);
+  for (ReturnInst& ret : functionReturns(f)) {
+    ret.replaceAllUsesWith(ReturnInst::Create(Context, nullptr, &ret));
+    ret.eraseFromParent();
+  }
 }
 
 void replaceRemillMemory(Module& m, Function& f) {
