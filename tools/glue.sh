@@ -125,16 +125,20 @@ function main() {
 
   set -o pipefail
   asl_translate $aslb $asl | prefix $op       || { echo "$op ==> asl-translator fail"; exit 4; }
-  llvm_translate $cap $capll cap | prefix $op || { echo "$op ==> llvm-translator cap fail"; exit 5; }
-  llvm_translate $rem $remll rem | prefix $op || { echo "$op ==> llvm-translator rem fail"; exit 6; }
+  llvm_translate $cap $capll cap | prefix $op || { echo "$op ==> llvm-translator cap fail"; }
+  llvm_translate $rem $remll rem | prefix $op || { echo "$op ==> llvm-translator rem fail"; }
   llvm_translate $asl $aslll asl | prefix $op || { echo "$op ==> llvm-translator asl fail"; exit 7; }
   llvm_translate_vars $aslll $capll $remll    || { echo "$op ==> llvm-translator vars fail"; exit 8; }
 
-  rm -f $alive
-  mnemonic $op >> $alive
-  alive $capll $aslll >> $alive
+  rm -f ${alive}{.rem,.cap,}
+  mnemonic $op >> $alive.cap
+  mnemonic $op >> $alive.rem
+  alive $capll $aslll >> $alive.cap
+  alive $remll $aslll >> $alive.rem
+  
+  cat $alive.cap >> $alive
   echo ========================================== >> $alive
-  alive $remll $aslll >> $alive
+  cat $alive.rem >> $alive
 
   grep --color=auto -E \
     "seems to be correct|equivalent|reverse|doesn't verify|ERROR:|UB triggered|^[|] |failed" $alive \
@@ -144,11 +148,12 @@ function main() {
   echo $remll 
   echo $aslll
   echo $alive
-  correct=$(grep 'seem to be equivalent' $alive | wc -l)
-  if [[ $correct == 2 ]]; then 
-    echo "$op ==> SUCCESS"
+  cap=$(grep 'seem to be equivalent' $alive.cap | wc -l)
+  rem=$(grep 'seem to be equivalent' $alive.rem | wc -l)
+  if [[ $cap == 1 && $rem == 1 ]]; then 
+    echo "$op ==> SUCCESS. cap $cap, rem $rem" 
   else
-    echo "$op ==> FAIL" 
+    echo "$op ==> FAILED. cap $cap, rem $rem" 
   fi
 }
 

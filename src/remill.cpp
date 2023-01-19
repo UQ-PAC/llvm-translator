@@ -229,7 +229,18 @@ void remill(Module& m) {
   std::vector<std::string> flag_funcs = {
     "__remill_flag_computation_sign",
     "__remill_flag_computation_zero",
-    "__remill_flag_computation_overflow"
+    "__remill_flag_computation_overflow",
+    "__remill_flag_computation_carry",
+    "__remill_compare_sle",
+    "__remill_compare_slt",
+    "__remill_compare_sgt",
+    "__remill_compare_sge",
+    "__remill_compare_eq)",
+    "__remill_compare_neq",
+    "__remill_compare_ugt",
+    "__remill_compare_uge",
+    "__remill_compare_ult",
+    "__remill_compare_ule",
   };
 
   for (auto& nm : flag_funcs) {

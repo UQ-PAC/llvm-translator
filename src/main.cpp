@@ -26,6 +26,7 @@ const char *__asan_default_options() {
 
 int force_vars(std::vector<std::string>& argv) {
     std::map<std::string, Type*> globals;
+    std::map<std::string, Type*> loads;
     std::map<std::string, std::unique_ptr<Module>> Modules;
 
     auto fnames = std::ranges::subrange(argv.begin() + 2, argv.end());
@@ -44,23 +45,32 @@ int force_vars(std::vector<std::string>& argv) {
                 globals[name] = var.getValueType();
             }
         }
+
+        for (auto& fn : Module->getFunctionList()) {
+            if (fn.getName().startswith("load_") && fn.hasNUsesOrMore(1)) {
+                std::string name{fn.getName()};
+                loads[name] = fn.getReturnType();
+            }
+        }
     }
 
     for (auto& [fname, Module] : Modules) {
         auto* root = findFunction(*Module, "root");
-        assert(root && "root function not found");
-        auto* entry = &root->getEntryBlock();
+        
+        if (root) {
+            auto* entry = &root->getEntryBlock();
 
-        if (entry->getName() != "forced_vars") {
-            auto* entry2 = BasicBlock::Create(Context, "forced_vars", root, entry);
+            if (entry->getName() != "forced_vars") {
+                auto* entry2 = BasicBlock::Create(Context, "forced_vars", root, entry);
 
-            IRBuilder irb{entry2, entry2->begin()};
-            for (auto& [nm, ty] : globals) {
-                auto* glo = Module->getNamedGlobal(nm);
-                auto* load = irb.CreateLoad(ty, glo, "_" + nm);
-                noundef(load);
+                IRBuilder irb{entry2, entry2->begin()};
+                for (auto& [nm, ty] : globals) {
+                    auto* glo = Module->getNamedGlobal(nm);
+                    auto* load = irb.CreateLoad(ty, glo, "_" + nm);
+                    noundef(load);
+                }
+                irb.CreateBr(entry);
             }
-            irb.CreateBr(entry);
         }
 
         std::vector<GlobalVariable*> globals; 
@@ -77,9 +87,10 @@ int force_vars(std::vector<std::string>& argv) {
         file << *Module;
     }
 
-
     return 0;
 }
+
+
 
 int main(int argc, char** argv)
 {

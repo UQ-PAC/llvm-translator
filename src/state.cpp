@@ -144,10 +144,15 @@ void correctMemoryAccesses(Module& m, Function& root) {
       };
 
       fn->addParamAttr(0, attr(NoUndef));
-      if (!fn->getReturnType()->isVoidTy())
-        fn->addRetAttr(attr(NoUndef));
+      if (!fn->getReturnType()->isVoidTy()) {
+        // fn->addRetAttr(attr(NoUndef));
+      }
       fn->addFnAttr(attr(InaccessibleMemOnly));
+      if (fn == load) {
+        fn->addFnAttr(attr(ReadOnly));
+      }
       fn->addFnAttr(attr(WillReturn));
+      fn->addFnAttr(attr(NoUnwind));
     }
 
     loads[sz] = load;
@@ -162,14 +167,14 @@ void correctMemoryAccesses(Module& m, Function& root) {
       if (auto* load = dyn_cast<LoadInst>(u)) {
         
         int sz = load->getType()->getIntegerBitWidth();
-        CallInst* call = CallInst::Create(loads[sz]->getFunctionType(), loads[sz], {addr}, "", load);
+        CallInst* call = CallInst::Create(loads[sz]->getFunctionType(), loads.at(sz), {addr}, "", load);
         load->replaceAllUsesWith(call);
         load->eraseFromParent();
 
       } else if (auto* stor = dyn_cast<StoreInst>(u)) {
         auto* val = stor->getValueOperand();
         int sz = stor->getValueOperand()->getType()->getIntegerBitWidth();
-        CallInst* call = CallInst::Create(stores[sz]->getFunctionType(), stores[sz], {addr, val}, "", stor);
+        CallInst* call = CallInst::Create(stores[sz]->getFunctionType(), stores.at(sz), {addr, val}, "", stor);
         stor->replaceAllUsesWith(call);
         stor->eraseFromParent();
 
