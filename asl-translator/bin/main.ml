@@ -10,4 +10,4 @@ let () =
   Llvm.print_module "/dev/stdout" llmodule;
   match Llvm_analysis.verify_module llmodule with 
   | None -> () 
-  | Some s -> failwith @@ "verify_module failed: " ^ s
+  | Some s -> failwith @@ "verify_module failed for " ^ fname ^ ": " ^ s

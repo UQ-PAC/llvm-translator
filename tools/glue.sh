@@ -13,9 +13,7 @@ CAPSTONE=$HOME/retdec/build/prefix/bin/retdec-capstone2llvmir
 function mnemonic() {
   op="$1"
 
-  pushd $ASLI > /dev/null
-  scripts/get_mnemonic.sh $op
-  popd > /dev/null
+  tools/get_mnemonic.sh $op
 }
 
 function asli() {
@@ -29,7 +27,6 @@ function asli() {
   hex="0x${d}${c}${b}${a}"
 
   pushd $ASLI
-  scripts/get_mnemonic.sh $op
   echo :dump A64 $hex "$f" | ./asli tests/override.asl tests/override.prj
   x=$?
   popd
@@ -66,8 +63,10 @@ function llvm_translate() {
   out=$2
   mode=$3
   pushd $LLVM_TRANS > /dev/null
-  build/go $mode $in > $out
+  build/go $mode $in 2>&1 1>${out}tmp
   x=$?
+  cat ${out}tmp | tools/post.sh > $out 
+  rm -f ${out}tmp
   popd > /dev/null
   return $x
 }
@@ -107,26 +106,29 @@ function main() {
 
   alive=$d/$op.alive.out
 
+  mnemonic $op | prefix $op 
+
   # asli $op $aslb 
   test -f $aslb || { echo "executing ASLI"; asli $op $aslb; }
-  test -f $aslb || { echo "$op --> asli fail"; exit 1; }
+  test -f $aslb || { echo "$op ==> asli fail"; exit 1; }
 
-  capstone $op $cap || { echo "$op --> capstone fail"; exit 2; }
-  remill $op $rem   || { echo "$op --> remill fail"; exit 3; }
+  capstone $op $cap || { echo "$op ==> capstone fail"; exit 2; }
+  remill $op $rem   || { echo "$op ==> remill fail"; exit 3; }
 
-  asl_translate $aslb $asl        || { echo "$op --> asl-translator fail"; exit 4; }
-  llvm_translate $cap $capll cap  || { echo "$op --> llvm-translator cap fail"; exit 5; }
-  llvm_translate $rem $remll rem  || { echo "$op --> llvm-translator rem fail"; exit 6; }
-  llvm_translate $asl $aslll asl  || { echo "$op --> llvm-translator asl fail"; exit 7; }
+  set -o pipefail
+  asl_translate $aslb $asl | prefix $op       || { echo "$op ==> asl-translator fail"; exit 4; }
+  llvm_translate $cap $capll cap | prefix $op || { echo "$op ==> llvm-translator cap fail"; exit 5; }
+  llvm_translate $rem $remll rem | prefix $op || { echo "$op ==> llvm-translator rem fail"; exit 6; }
+  llvm_translate $asl $aslll asl | prefix $op || { echo "$op ==> llvm-translator asl fail"; exit 7; }
 
-  rm -fv $alive
+  rm -f $alive
   mnemonic $op >> $alive
   alive $capll $aslll >> $alive
   echo ========================================== >> $alive
   alive $remll $aslll >> $alive
 
   grep --color=auto -E \
-    "seems to be correct|equivalent|reverse|doesn't verify|ERROR:|UB triggered|^[|] |^"$'\t' $alive \
+    "seems to be correct|equivalent|reverse|doesn't verify|ERROR:|UB triggered|^[|] |failed" $alive \
     | prefix $op
 
   echo $capll
@@ -135,11 +137,12 @@ function main() {
   echo $alive
   correct=$(grep 'seem to be equivalent' $alive | wc -l)
   if [[ $correct == 2 ]]; then 
-    echo "SUCCESS" | prefix $op
+    echo "$op ==> SUCCESS"
   else
-    echo "FAIL" | prefix $op
+    echo "$op ==> FAIL" 
   fi
 }
 
-main "$@"
-exit $?
+x="$(main "$@")"
+echo "$x"
+exec echo "$x" | grep -q 'SUCCESS'

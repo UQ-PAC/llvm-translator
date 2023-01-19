@@ -47,6 +47,7 @@ std::vector<GlobalVariable*> generateGlobalState(Module& m, Function& f) {
     regs.push_back({STATUS, 'V'});
 
     regs.push_back({PC});
+    regs.push_back({SP});
 
     std::vector<GlobalVariable*> globals{};
     for (auto& reg : regs) {
@@ -93,6 +94,10 @@ void correctGlobalAccesses(std::vector<GlobalVariable*>& globals) {
                 auto* val = store->getValueOperand();
                 auto* valTy = val->getType();
                 unsigned valWd = valTy->getIntegerBitWidth();
+
+                if (store->getAlign().value() > 8) {
+                    store->setAlignment(llvm::Align(8));
+                }
 
                 if (valWd == gloWd) {
                     // widths match
@@ -262,6 +267,8 @@ std::string StateReg::name() const {
         prefix = {d.flag};
     } else if (t == PC) {
         prefix = "PC";
+    } else if (t == SP) {
+        prefix = "SP";
     } else {
         llvm_unreachable("name()");
     }
@@ -272,13 +279,11 @@ std::string StateReg::name() const {
 
 size_t StateReg::size() const {
     auto t = this->type;
-    if (t == X) {
-        return 64;
-    } else if (t == V) {
+    if (t == V) {
         return 128;
     } else if (t == STATUS) {
         return 1;
-    } else if (t == PC) {
+    } else if (t == PC || t == SP || t == X) {
         return 64;
     } else {
         llvm_unreachable("size()");

@@ -34,7 +34,8 @@ enum StateType {
     X, // data is register num, as unsigned
     V, // data is register num, as unsigned
     STATUS, // data is uppercase ascii character, as char
-    PC // data unused
+    PC, // data unused
+    SP
 };
 
 struct StateReg {

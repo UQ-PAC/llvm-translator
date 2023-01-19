@@ -22,6 +22,7 @@ let func : llvalue = declare_function "root" void_fun_t llmodule
 let translate_ty (ty: ty) : lltype = 
   match ty with 
   | Type_Bits (Expr_LitInt n) -> integer_type ctx (int_of_string n)
+  | Type_Constructor (Ident "boolean") -> bool_t
   | Type_Bits _
   | Type_Constructor _
   | Type_OfExpr _
@@ -47,6 +48,11 @@ let unusable : llvalue = poison (vector_type (integer_type ctx 403 (* forbidden 
 let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llbuilder): llvalue option = 
   let err s = failwith @@ "translate_prim: " ^ s ^ " at " ^ pp_expr (Expr_TApply (Ident nm, tes, es)) in
   match nm,tes,es with 
+
+  | "cvt_bool_bv",_,[x]
+  | "cvt_bv_bool",_,[x] -> 
+    Some (translate_expr x build)
+
   | "add_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_add x y "" build)
@@ -75,9 +81,20 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
     let x = translate_expr x build in 
     Some (build_not x "" build)
 
-  | "eq_bits",_,[x;y] -> 
+  | "eq_bits",_,[x;y]
+  | "eq_enum",_,[x;y] ->
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_icmp Icmp.Eq x y "" build)
+  | "ne_bits",_,[x;y] ->
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_icmp Icmp.Ne x y "" build)
+
+  | "slt_bits",_,[x;y] ->
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_icmp Icmp.Slt x y "" build)
+  | "sle_bits",_,[x;y] ->
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_icmp Icmp.Sle x y "" build)
 
   | "lsl_bits",_,[x;Expr_LitBits n] -> 
     let x = translate_expr x build in
@@ -126,6 +143,20 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
   | "SignExtend",_,[x;Expr_LitInt n] -> 
     let x = translate_expr x build and n = int_of_string n in
     Some (build_sext x (integer_type ctx n) "" build)
+
+  (* ["LSL",0; "LSR",0; "ASR",0; "SignExtend",0; "ZeroExtend",0] *)
+
+  | "LSL",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_shl x y "" build)
+  | "LSR",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_lshr x y "" build)
+  | "ASR",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    Some (build_ashr x y "" build)
+
+
 
   | "Mem.read",_,[addr;Expr_LitInt n;_] -> 
     let addr = translate_expr addr build and n = int_of_string n in
@@ -210,6 +241,8 @@ and translate_lexpr (lexp: lexpr) : llvalue =
   match lexp with 
 
   | LExpr_Var (Ident "_PC") -> find "PC"
+  | LExpr_Var (Ident "SP_EL0") -> find "SP"
+  | LExpr_Var (Ident id) when String.starts_with ~prefix:"SP_" id -> err @@ "unsupported stack pointer: " ^ id
   | LExpr_Var nm -> find (ident nm)
   
   | LExpr_Array (LExpr_Var (Ident "_R"), Expr_LitInt n) -> find ("X"^n)

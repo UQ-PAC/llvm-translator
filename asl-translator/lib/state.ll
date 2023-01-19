@@ -65,6 +65,7 @@ source_filename = "/nonexistent.ll"
 @V29 = global i128 0
 @V30 = global i128 0
 @V31 = global i128 0
+@SP = global i64 0
 @NF = global i1 false
 @ZF = global i1 false
 @CF = global i1 false

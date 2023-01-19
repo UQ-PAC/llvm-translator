@@ -29,6 +29,8 @@ std::optional<StateReg> discriminateGlobal(std::string nm) {
         return StateReg{V, std::stoi(nm.substr(1))};
     } else if (nm == "pc") {
         return StateReg{PC};
+    } else if (nm == "sp") {
+        return StateReg{SP};
     } else if (nm.starts_with("cpsr_")) {
         return StateReg{STATUS, toupper(nm.at(5))};
     } else {
@@ -43,11 +45,15 @@ void capstoneMakeBranchCond(Module& m, GlobalVariable& pc) {
     Type* ty = pc.getValueType();
     auto* four = ConstantInt::get(ty, 4);
 
+    using BOp = llvm::BinaryOperator;
+
     auto* bb = BasicBlock::Create(Context, "", &f);
+    auto* load = new LoadInst(ty, &pc, "", bb);
+    auto* dest = BOp::Create(BOp::Add, load, f.getArg(1), "", bb);
     auto* sel = SelectInst::Create(
         f.getArg(0),
-        BinaryOperator::Create(Instruction::BinaryOps::Sub, f.getArg(1), four, "", bb),
-        new LoadInst(ty, &pc, "", bb),
+        BOp::Create(BOp::Sub, dest, four, "", bb),
+        load,
         "", bb);
     new StoreInst(sel, &pc, bb);
     ReturnInst::Create(Context, bb);

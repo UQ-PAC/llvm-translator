@@ -41,7 +41,7 @@ StateReg translateStateAccess(Module& m, GetElementPtrInst& gep) {
     if (k == 65)
       return StateReg{PC};
     else if (k == 63)
-      assert(false && "SP");
+      return StateReg{SP};
     else if (0 <= k && k <= 61 && k % 2 == 1)
       return StateReg{X, k/2};
 
@@ -108,6 +108,7 @@ void replaceRemillStateAccess(Module& m, Function& f) {
   // remill has a %program_counter argument which is just the initial program counter.
   auto* pcload = new LoadInst(
     pc->getType(), globalpc, "program_counter", &*entry.getFirstInsertionPt());
+  noundef(pcload);
   pc->replaceAllUsesWith(pcload);
   assert(pc->getNumUses() == 0);
 
