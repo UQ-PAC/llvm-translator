@@ -89,7 +89,9 @@ void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
                     // assert(valWd == gloWd && "attempt to load a value from a smaller register");
                 }
 
-                load->setName(glo->getName());
+                if (!load->getName().startswith("_")) {
+                    load->setName(glo->getName());
+                }
                 noundef(load);
             } else if (auto* store = dyn_cast<StoreInst>(u)) {
                 auto* val = store->getValueOperand();

@@ -50,19 +50,16 @@ int force_vars(std::vector<std::string>& argv) {
         auto* root = findFunction(*Module, "root");
         assert(root && "root function not found");
         auto* entry = &root->getEntryBlock();
-        auto* entry2 = BasicBlock::Create(Context, "forced_vars", root, entry);
 
-        IRBuilder irb{entry2, entry2->begin()};
-        for (auto& [nm, ty] : globals) {
-            auto* glo = Module->getNamedGlobal(nm);
-            if (glo->getNumUses() == 0) {
+        if (entry->getName() != "forced_vars") {
+            auto* entry2 = BasicBlock::Create(Context, "forced_vars", root, entry);
+
+            IRBuilder irb{entry2, entry2->begin()};
+            for (auto& [nm, ty] : globals) {
+                auto* glo = Module->getNamedGlobal(nm);
                 auto* load = irb.CreateLoad(ty, glo, "_" + nm);
                 noundef(load);
             }
-        }
-        if (entry2->empty()) {
-            entry2->eraseFromParent();
-        } else {
             irb.CreateBr(entry);
         }
 
