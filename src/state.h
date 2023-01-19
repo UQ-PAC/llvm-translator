@@ -20,7 +20,7 @@ extern const std::string entry_function_name;
 
 Function* findFunction(Module& m, std::string const& name);
 std::vector<GlobalVariable*> generateGlobalState(Module& m, Function& f);
-void correctGlobalAccesses(std::vector<GlobalVariable*>& globals);
+void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals);
 void correctMemoryAccesses(Module& m, Function& root);
 void noundef(LoadInst*);
 

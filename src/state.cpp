@@ -62,7 +62,7 @@ void noundef(LoadInst* load) {
     load->setMetadata("noundef", MDTuple::get(Context, {}));
 }
 
-void correctGlobalAccesses(std::vector<GlobalVariable*>& globals) {
+void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
     for (auto* glo : globals) {
         auto* gloTy = glo->getValueType();
         auto gloWd = gloTy->getIntegerBitWidth();
@@ -89,6 +89,7 @@ void correctGlobalAccesses(std::vector<GlobalVariable*>& globals) {
                     // assert(valWd == gloWd && "attempt to load a value from a smaller register");
                 }
 
+                load->setName(glo->getName());
                 noundef(load);
             } else if (auto* store = dyn_cast<StoreInst>(u)) {
                 auto* val = store->getValueOperand();

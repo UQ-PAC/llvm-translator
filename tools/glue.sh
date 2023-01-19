@@ -71,6 +71,14 @@ function llvm_translate() {
   return $x
 }
 
+function llvm_translate_vars() {
+  pushd $LLVM_TRANS > /dev/null
+  build/go vars $@
+  x=$?
+  popd > /dev/null
+  return $x
+}
+
 function alive() {
   a=${op:0:2}
   b=${op:2:2}
@@ -120,6 +128,7 @@ function main() {
   llvm_translate $cap $capll cap | prefix $op || { echo "$op ==> llvm-translator cap fail"; exit 5; }
   llvm_translate $rem $remll rem | prefix $op || { echo "$op ==> llvm-translator rem fail"; exit 6; }
   llvm_translate $asl $aslll asl | prefix $op || { echo "$op ==> llvm-translator asl fail"; exit 7; }
+  llvm_translate_vars $aslll $capll $remll    || { echo "$op ==> llvm-translator vars fail"; exit 8; }
 
   rm -f $alive
   mnemonic $op >> $alive
