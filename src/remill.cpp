@@ -72,7 +72,7 @@ void replaceRemillStateAccess(Module& m, Function& f) {
   auto* pc = f.getArg(1);
   auto* mem = f.getArg(2);
   
-  for (auto* u : clone_it(state->users())) {
+  for (User* u : clone_it(state->users())) {
     StoreInst* store; 
     CallInst* call;
 
@@ -99,6 +99,22 @@ void replaceRemillStateAccess(Module& m, Function& f) {
       assert(alloc->isSafeToRemove());
       alloc->eraseFromParent();
     } else {
+      if (auto inst = dyn_cast<CallInst>(u)) {
+        // remill-style branch: call ptr @sub_fffffffffffffffc(ptr %state, i64 %10, ptr %9)
+        if (inst->getNumUses() == 0 && inst->getCalledFunction()->getName().startswith("sub_")) {
+          // at this point, the call address is in PC and the return address is in %RETURN_PC and @X30
+          auto* pc = m.getNamedGlobal("PC");
+          auto* load = new LoadInst(pc->getValueType(), pc, "", inst);
+          auto* return_pc = findLocalVariable(f, "RETURN_PC");
+          auto* store = new StoreInst(load, return_pc, inst);
+          // the function epilogue moves %RETURN_PC into @PC which overwrites the branch address.
+          // this alters %RETURN_PC so @PC value is the branch address at end of function.
+
+          inst->eraseFromParent();
+          continue;
+        }
+      }
+      
       errs() << *u << '\n';
       assert(false && "unsupported user of remill state");
     }
@@ -142,13 +158,20 @@ void replaceRemillTailCall(Module& m, Function& f) {
   if (!missing_block) {
     missing_block = findFunction(m, "__remill_function_return");
   }
+  if (!missing_block) {
+    missing_block = findFunction(m, "__remill_jump");
+  }
   assert(missing_block);
 
   // ReturnInst::Create(Context, UndefValue::get(PointerType::get(Context, 0)), 
   //   BasicBlock::Create(Context, "", &missing_block));
   // assert(missing_block->getNumUses() == 1);
-  for (auto* user : clone_it(missing_block->users())) {
+  for (User * user : clone_it(missing_block->users())) {
     if (auto* call = dyn_cast<CallInst>(user)) {
+      if (call->getCalledFunction()->getName() == "__remill_jump") {
+        auto* pc = m.getNamedGlobal("PC");
+        auto* StoreInst 
+      }
       call->replaceAllUsesWith(UndefValue::get(call->getType()));
       call->eraseFromParent();
     }
@@ -262,7 +285,8 @@ void remill(Module& m) {
     f.addFnAttr(Attribute::get(Context, Attribute::AttrKind::AlwaysInline));
   }
 
-  Function* root = &*m.begin();
+  Function* root = findFunction(m, "sub_0");
+  assert(root && "remill missing sub_0");
   
   auto globals = generateGlobalState(m, *root);
 

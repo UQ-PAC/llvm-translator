@@ -6,7 +6,7 @@ ASLI=$HOME/asl-interpreter
 ASL_TRANS=$HOME/llvm-translator/asl-translator
 LLVM_TRANS=$HOME/llvm-translator
 
-CAPSTONE=$HOME/retdec/build/prefix/bin/retdec-capstone2llvmir 
+CAPSTONE=$HOME/retdec/build/prefix/bin/retdec-capstone2llvmir
 
 # all opcodes in little endian compressed format
 
@@ -65,7 +65,7 @@ function llvm_translate() {
   pushd $LLVM_TRANS > /dev/null
   build/go $mode $in 2>&1 1>${out}tmp
   x=$?
-  cat ${out}tmp | tools/post.sh > $out 
+  cat ${out}tmp | tools/post.sh > $out
   rm -f ${out}tmp
   popd > /dev/null
   return $x
@@ -114,9 +114,9 @@ function main() {
 
   alive=$d/$op.alive.out
 
-  mnemonic $op | prefix $op 
+  mnemonic $op | prefix $op
 
-  # asli $op $aslb 
+  # asli $op $aslb
   test -f $aslb || { echo "executing ASLI"; asli $op $aslb; }
   test -f $aslb || { echo "$op ==> asli fail"; exit 1; }
 
@@ -135,7 +135,7 @@ function main() {
   mnemonic $op >> $alive.rem
   alive $capll $aslll >> $alive.cap
   alive $remll $aslll >> $alive.rem
-  
+
   cat $alive.cap >> $alive
   echo ========================================== >> $alive
   cat $alive.rem >> $alive
@@ -145,15 +145,15 @@ function main() {
     | prefix $op
 
   echo $capll
-  echo $remll 
+  echo $remll
   echo $aslll
   echo $alive
   cap=$(grep 'seem to be equivalent' $alive.cap | wc -l)
   rem=$(grep 'seem to be equivalent' $alive.rem | wc -l)
-  if [[ $cap == 1 && $rem == 1 ]]; then 
-    echo "$op ==> SUCCESS. cap $cap, rem $rem" 
+  if [[ $cap == 1 && $rem == 1 ]]; then
+    echo "$op ==> SUCCESS. cap $cap, rem $rem"
   else
-    echo "$op ==> FAILED. cap $cap, rem $rem" 
+    echo "$op ==> FAILED. cap $cap, rem $rem"
   fi
 }
 

@@ -16,6 +16,8 @@ let i128_t = integer_type ctx 128
 let void_t = void_type ctx
 let void_fun_t : lltype = function_type void_t [| |]
 
+let log2 x = Float.of_int x |> Float.log2 |> Float.ceil |> Int.of_float
+
 let func : llvalue = declare_function "root" void_fun_t llmodule
 (* let entry = entry_block func *)
 
@@ -96,19 +98,21 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_icmp Icmp.Sle x y "" build)
 
-  | "lsl_bits",_,[x;Expr_LitBits n] -> 
-    let x = translate_expr x build in
-    let n = const_int_of_string (type_of x) n 2 in
-    Some (build_shl x n "" build)
-  | "lsr_bits",_,[x;Expr_LitBits n] -> 
-    let x = translate_expr x build in
-    let n = const_int_of_string (type_of x) n 2 in
-    Some (build_lshr x n "" build)
-  | "asr_bits",_,[x;Expr_LitBits n] -> 
-    let x = translate_expr x build in
-    let n = const_int_of_string (type_of x) n 2 in
-    Some (build_ashr x n "" build)
-
+  | "lsl_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    assert (integer_bitwidth (type_of x) >= integer_bitwidth (type_of y));
+    let y = build_zext_or_bitcast y (type_of x) "" build in
+    Some (build_shl x y "" build)
+  | "lsr_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    assert (integer_bitwidth (type_of x) >= integer_bitwidth (type_of y));
+    let y = build_zext_or_bitcast y (type_of x) "" build in
+    Some (build_lshr x y "" build)
+  | "asr_bits",_,[x;y] -> 
+    let x = translate_expr x build and y = translate_expr y build in 
+    assert (integer_bitwidth (type_of x) >= integer_bitwidth (type_of y));
+    let y = build_zext_or_bitcast y (type_of x) "" build in
+    Some (build_ashr x y "" build)
 
 
 
@@ -148,12 +152,18 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
 
   | "LSL",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
+    assert (integer_bitwidth (type_of x) >= integer_bitwidth (type_of y));
+    let y = build_zext_or_bitcast y (type_of x) "" build in
     Some (build_shl x y "" build)
   | "LSR",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
+    assert (integer_bitwidth (type_of x) >= integer_bitwidth (type_of y));
+    let y = build_zext_or_bitcast y (type_of x) "" build in
     Some (build_lshr x y "" build)
   | "ASR",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
+    assert (integer_bitwidth (type_of x) >= integer_bitwidth (type_of y));
+    let y = build_zext_or_bitcast y (type_of x) "" build in
     Some (build_ashr x y "" build)
 
 
@@ -209,7 +219,16 @@ and translate_expr (exp : expr) (build: llbuilder) : llvalue =
     | None -> err "translate_prim returned no value"
     | Some x -> x)
   
-  | Expr_LitInt _ -> assert false
+  | Expr_LitInt n ->
+    let n = int_of_string n in 
+    assert (n >= 0);
+    let bits = 
+      if n > 0 then Float.of_int n |> Float.log2 |> Float.floor |> Float.add Float.one |> Int.of_float 
+      else 1
+    in 
+    (* Printf.printf "n=%d,bits=%d\n" n bits; *)
+    assert (n < Int.shift_left 1 bits);
+    const_int (integer_type ctx bits) n 
   | Expr_LitHex _ -> assert false
   | Expr_LitBits str -> 
     let ty = integer_type ctx (String.length str) in

@@ -5,7 +5,8 @@ project(llvm-translator)
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM 14 REQUIRED CONFIG
+    PATHS /usr/lib/llvm14/lib/cmake/llvm)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")

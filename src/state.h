@@ -19,6 +19,7 @@ using namespace llvm;
 extern const std::string entry_function_name; 
 
 Function* findFunction(Module& m, std::string const& name);
+AllocaInst* findLocalVariable(Function& f, std::string const& name);
 std::vector<GlobalVariable*> generateGlobalState(Module& m, Function& f);
 void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals);
 void correctMemoryAccesses(Module& m, Function& root);

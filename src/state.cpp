@@ -20,6 +20,18 @@ Function* findFunction(Module& m, std::string const& name) {
     return it != m.end() ? &*it : nullptr;
 }
 
+AllocaInst* findLocalVariable(Function& f, std::string const& name) {
+    for (auto& bb : f) {
+        for (auto& inst : bb) {
+            if (auto* alloc = dyn_cast<AllocaInst>(&inst)) {
+                if (alloc->getName() == name)
+                    return alloc;
+            }
+        }
+    }
+    return nullptr; 
+}
+
 GlobalVariable* variable(Module& m, int size, const std::string nm) {
     IntegerType* ty = Type::getIntNTy(Context, size);
 
