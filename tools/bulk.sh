@@ -3,6 +3,12 @@
 
 
 set -e
+out="$1"
+if [[ -z "$out" ]]; then 
+  echo "specify output directory as first argument"
+  exit 1; 
+fi 
+mkdir -p "$out"
 cd $(dirname $0)
 
 pushd ../build
@@ -20,6 +26,7 @@ rm -f ops
 ASL=~/asl-interpreter
 for f in aarch64_*;do
   echo $f
+  mkdir -p $out
   d=/tmp/$(date -I)
   mkdir -p $d
   pushd $ASL
@@ -28,5 +35,5 @@ for f in aarch64_*;do
   echo "$ops" | sed -E "s#0x(..)(..)(..)(..)#:dump A64 0x\1\2\3\4 $d/\4\3\2\1.aslb#" | ./asli tests/override.asl tests/override.prj
   popd
   #echo "$ops" | sed 's/0x\(..\)\(..\)\(..\)\(..\)/\4\3\2\1/' | xargs -n 1 ./get_mnemonic.sh
-  echo "$ops" | cat | sed 's/0x\(..\)\(..\)\(..\)\(..\)/\4\3\2\1/' | xargs -P 5 -n 1 ./glue.sh
+  echo "$ops" | cat | sed 's/0x\(..\)\(..\)\(..\)\(..\)/\4\3\2\1/' | xargs -P 5 -n 1 ./glue.sh '{}' "$out/$f" ';'
 done

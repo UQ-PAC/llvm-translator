@@ -73,9 +73,6 @@ void replaceRemillStateAccess(Module& m, Function& f) {
   auto* mem = f.getArg(2);
   
   for (User* u : clone_it(state->users())) {
-    StoreInst* store; 
-    CallInst* call;
-
     if (auto* gep = dyn_cast<GetElementPtrInst>(u)) {
       StateReg reg = translateStateAccess(m, *gep);
       GlobalVariable* glo = m.getNamedGlobal(reg.name());
@@ -84,8 +81,7 @@ void replaceRemillStateAccess(Module& m, Function& f) {
       assert(gep->isSafeToRemove());
       gep->eraseFromParent();
 
-    // } else if ((call = dyn_cast<CallInst>(u)) && call->getFunction()->getName() == "__remill_missing_block") {
-    } else if ((store = dyn_cast<StoreInst>(u)) && store->getValueOperand() == state) {
+    } else if (auto* store = dyn_cast<StoreInst>(u); store && store->getValueOperand() == state) {
       // remill inserts a superfluous store of %state into %STATE:
       // %STATE = alloca ptr, align 8
       // store ptr %state, ptr %STATE, align 8
@@ -99,18 +95,18 @@ void replaceRemillStateAccess(Module& m, Function& f) {
       assert(alloc->isSafeToRemove());
       alloc->eraseFromParent();
     } else {
-      if (auto inst = dyn_cast<CallInst>(u)) {
+      if (auto call = dyn_cast<CallInst>(u)) {
         // remill-style branch: call ptr @sub_fffffffffffffffc(ptr %state, i64 %10, ptr %9)
-        if (inst->getNumUses() == 0 && inst->getCalledFunction()->getName().startswith("sub_")) {
+        if (call->getNumUses() == 0 && call->getCalledFunction()->getName().startswith("sub_")) {
           // at this point, the call address is in PC and the return address is in %RETURN_PC and @X30
           auto* pc = m.getNamedGlobal("PC");
-          auto* load = new LoadInst(pc->getValueType(), pc, "", inst);
+          auto* load = new LoadInst(pc->getValueType(), pc, "", call);
           auto* return_pc = findLocalVariable(f, "RETURN_PC");
-          auto* store = new StoreInst(load, return_pc, inst);
+          auto* store = new StoreInst(load, return_pc, call);
           // the function epilogue moves %RETURN_PC into @PC which overwrites the branch address.
           // this alters %RETURN_PC so @PC value is the branch address at end of function.
 
-          inst->eraseFromParent();
+          call->eraseFromParent();
           continue;
         }
       }

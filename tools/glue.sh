@@ -1,6 +1,5 @@
 #!/bin/bash
 
-cd $(dirname "$0")/..
 
 ASLI=$HOME/asl-interpreter
 ASL_TRANS=$HOME/llvm-translator/asl-translator
@@ -157,6 +156,14 @@ function main() {
   fi
 }
 
-x="$(main "$@")"
+d="$2"
+if ! [[ -z "$d" ]]; then
+  exec 2>"$d/$1.err"
+  exec 1>"$d/$1.out"
+fi
+
+cd $(dirname "$0")/..
+
+x="$(main "$1")"
 echo "$x"
 exec echo "$x" | grep -q 'SUCCESS'
