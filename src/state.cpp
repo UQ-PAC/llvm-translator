@@ -1,6 +1,8 @@
 #include "state.h"
 #include "context.h"
 
+#include "llvm/IR/IRBuilder.h"
+
 #include <map>
 
 using namespace llvm;
@@ -74,11 +76,48 @@ void noundef(LoadInst* load) {
     load->setMetadata("noundef", MDTuple::get(Context, {}));
 }
 
+void correctGetElementPtr(GlobalVariable* glo, User* gep, int offset) {
+    Type* gloTy = glo->getValueType();
+    
+    for (User* u2 : clone_it(gep->users())) {
+        if (auto* load = dyn_cast<LoadInst>(u2)) {
+            IRBuilder irb{load};
+            auto* load2 = irb.CreateLoad(gloTy, glo, "");
+            auto* shift = offset > 0 ? irb.CreateLShr(load2, offset) : load2;
+            auto* trunc = irb.CreateTruncOrBitCast(shift, load->getType());
+            load->replaceAllUsesWith(trunc);
+            load->eraseFromParent();
+        } else if (auto* store = dyn_cast<StoreInst>(u2)) {
+            IRBuilder irb{store};
+
+            auto* value = store->getValueOperand();
+            auto* valueTy = value->getType();
+            value = irb.CreateZExtOrBitCast(value, gloTy);
+            value = offset > 0 ? irb.CreateShl(value, offset) : value;
+
+            auto* load2 = irb.CreateLoad(gloTy, glo, "");
+            auto focus = APInt::getZero(valueTy->getIntegerBitWidth());
+            auto mask = APInt::getAllOnes(gloTy->getIntegerBitWidth());
+            mask.insertBits(focus, offset);
+
+            auto* andd = irb.CreateAnd(load2, ConstantInt::get(gloTy, mask));
+            auto* orr = irb.CreateOr(andd, value);
+            store->replaceAllUsesWith(irb.CreateStore(orr, glo));
+            store->eraseFromParent();
+        } else {
+            errs() << *u2 << '\n';
+            assert(false && "unsupported use of getelementptr of global register");
+        }
+    }
+    assert(gep->getNumUses() == 0 && "uses of gep not fully eliminated");
+}
+
+
 void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
     for (auto* glo : globals) {
         auto* gloTy = glo->getValueType();
         auto gloWd = gloTy->getIntegerBitWidth();
-        for (User* u : glo->users()) {
+        for (User* u : clone_it(glo->users())) {
             if (auto* load = dyn_cast<LoadInst>(u)) {
                 auto* valTy = load->getType(); 
                 unsigned valWd = valTy->getIntegerBitWidth(); 
@@ -118,12 +157,22 @@ void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
                     // widths match
                 } else if (valWd > gloWd) {
                     store->setOperand(0, new TruncInst(val, gloTy, "", store));
-                } else {
-                    assert(valWd == gloWd && "attempt to store a value in larger global register");
+                } else if (valWd < gloWd) {
+                    store->setOperand(0, new ZExtInst(val, gloTy, "", store));
                 }
+            } else if (auto* gep = dyn_cast<GetElementPtrInst>(u)) {
+                assert(gep->getNumIndices() == 1 && "too many indices for global register getelementptr");
+                int wd = gep->getResultElementType()->getIntegerBitWidth();
+                int index = cast<ConstantInt>(gep->idx_begin())->getSExtValue();
+                correctGetElementPtr(glo, gep, wd*index);
+            } else if (auto* gep2 = dyn_cast<GEPOperator>(u)) {
+                assert(gep2->getNumIndices() == 1 && "too many indices for global register getelementptr");
+                int wd = gep2->getResultElementType()->getIntegerBitWidth();
+                int index = cast<ConstantInt>(gep2->idx_begin())->getSExtValue();
+                correctGetElementPtr(glo, gep2, wd*index);
             } else {
                 errs() << *u << '\n';
-                assert(0 && "unsupported use of unified global variable");
+                assert(false && "unsupported use of unified global variable");
             }
         }
     }
