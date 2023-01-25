@@ -159,7 +159,7 @@ void replaceRemillTailCall(Module& m, Function& f) {
     missing_block = findFunction(m, "__remill_function_return");
   }
   if (!missing_block) {
-    missing_block = findFunction(m, "__remill_jump");
+    missing_block = findFunction(m, "__remill_jump"); // br
   }
   assert(missing_block);
 
@@ -168,10 +168,6 @@ void replaceRemillTailCall(Module& m, Function& f) {
   // assert(missing_block->getNumUses() == 1);
   for (User * user : clone_it(missing_block->users())) {
     if (auto* call = dyn_cast<CallInst>(user)) {
-      if (call->getCalledFunction()->getName() == "__remill_jump") {
-        auto* pc = m.getNamedGlobal("PC");
-        auto* StoreInst 
-      }
       call->replaceAllUsesWith(UndefValue::get(call->getType()));
       call->eraseFromParent();
     }
@@ -258,7 +254,7 @@ void remill(Module& m) {
     "__remill_compare_slt",
     "__remill_compare_sgt",
     "__remill_compare_sge",
-    "__remill_compare_eq)",
+    "__remill_compare_eq",
     "__remill_compare_neq",
     "__remill_compare_ugt",
     "__remill_compare_uge",
