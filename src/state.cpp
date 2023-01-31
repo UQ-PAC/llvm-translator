@@ -2,6 +2,8 @@
 #include "context.h"
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/Support/Casting.h"
 
 #include <map>
 
@@ -170,6 +172,8 @@ void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
                 int wd = gep2->getResultElementType()->getIntegerBitWidth();
                 int index = cast<ConstantInt>(gep2->idx_begin())->getSExtValue();
                 correctGetElementPtr(glo, gep2, wd*index);
+            } else if (auto* phi = dyn_cast<PHINode>(u)) {
+                // ignore for now
             } else {
                 errs() << *u << '\n';
                 assert(false && "unsupported use of unified global variable");

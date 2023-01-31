@@ -61,17 +61,20 @@ def consume(iterator, n=None) -> None:
     # advance to the empty slice starting at position n
     next(islice(iterator, n, n), None)
 
-LifterResult = Literal['success', 'mismatch', 'ub', 'hypercall', 'timeout', 'domain', 'empty', 'unknown']
+LifterResult = Literal['success', 'mismatch', 'ub', 'hypercall', 'timeout', 'domain', 'empty', 'unknown', 'variable']
 
 @dataclass
 class Result:
   opcode: str # little-endian
   mnemonic: str 
-  cap_bool: bool 
-  rem_bool: bool
-  cap: LifterResult
-  rem: LifterResult
-  detail: str
+  category: str 
+  asl: Literal['success', 'fail']
+  cap_bool: bool = False
+  rem_bool: bool = False
+  cap: LifterResult = 'unknown'
+  rem: LifterResult = 'unknown'
+  detail: str = ''
+  errors: str = ''
 
 def get_result(block: str) -> tuple[bool, LifterResult]:
   if 'These functions seem to be equivalent!' in block: 
@@ -84,10 +87,11 @@ def get_result(block: str) -> tuple[bool, LifterResult]:
     return False, 'mismatch'
   if 'return domain' in block:
     return False, 'domain'
-  if block.count('\n') == 4:
+  if block.count('\n') == 4 or '0 failed-to-prove' in block:
     return False, 'empty'
   if 'ERROR: ' in block:
     return False, 'unknown'
+  print(repr(block))
   assert False, 'unhandled result block'  
 
 
@@ -102,11 +106,15 @@ def parse_op(f: PeekIterator[str]) -> Result:
     op = op.split()[0]
     mnemonic = (name + ' ' + args).strip()
 
-  # consume(takeuntil(lambda x: 'Capstone' in x, f))
+  consume(takeuntil(lambda x: 'Capstone' in x, f))
 
-  l = list(takeuntil(lambda x: ' ==> ' in x, f))
+  l = list(takeuntil(lambda x: '==> FAILED' in x or '==> SUCCESS' in x, f))
   detail = ''.join(l)
   l = PeekIterator(iter(l))
+  if 'asl-translator fail' in detail: 
+    return Result(op, mnemonic, '', False, detail=detail)
+  if 'llvm-translator vars fail' in detail: 
+    return Result(op, mnemonic, '', False, detail=detail)
 
   head = ''.join(takewhile(lambda x: ' --> | ' not in x, l))
   hypercall = 'hyper_call' in head
@@ -118,32 +126,36 @@ def parse_op(f: PeekIterator[str]) -> Result:
 
   cap_block = ''.join(lifter_block())
   cap_bool,cap = get_result(cap_block)
+  if 'unhandled capstone variable' in detail:
+    cap = 'variable'
 
   rem_block = ''.join(lifter_block())
   rem_bool,rem = get_result(rem_block)
   if hypercall: rem = 'hypercall'
 
-  return Result(op, mnemonic, int(cap_bool), int(rem_bool), cap, rem, detail)
+  return Result(op, mnemonic, '', True, (cap_bool), (rem_bool), cap, rem, detail)
 
 
 def main(argv):
-  assert len(argv) >= 2, "log file required as first argument"
+  assert len(argv) >= 2, "log directory required as first argument"
   assert len(argv) >= 3, "out file required as second argument"
+
+  from pathlib import Path
 
   fname = argv[1]
   results = []
-  with open(fname) as f: 
-    f = PeekIterator(iter(f))
-    # consume(takewhile(lambda x: 'Dumping' not in x, f))
-    # consume(takewhile(lambda x: 'Dumping' in x, f))
-    # next(f)
+  for d in Path(fname).iterdir():
+    if not d.is_dir(): continue 
+    for f in d.iterdir():
+      print(f)
+      if not f.name.endswith('.out'): continue
+      with open(f) as file: 
+        x = parse_op(PeekIterator(iter(file)))
+        x.category = d.name
+        x.errors = f.with_suffix('.err').read_text()
 
+        results.append(x)
 
-    try:
-      while True:
-        results.append(parse_op(f))
-    except StopIteration: 
-      pass
   print(len(results))
 
   with open(argv[2], 'w', newline='') as f:

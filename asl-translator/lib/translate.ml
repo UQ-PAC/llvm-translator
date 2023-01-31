@@ -55,6 +55,9 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
   | "cvt_bv_bool",_,[x] -> 
     Some (translate_expr x build)
 
+  | "neg_bits",_,[x] -> 
+    let x = translate_expr x build in
+    Some (build_neg x "" build)
   | "add_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_add x y "" build)
@@ -69,13 +72,13 @@ let rec translate_prim (nm: string) (tes: expr list) (es: expr list) (build: llb
     Some (build_sdiv x y "" build)
 
 
-  | "or_bits",_,[x;y] -> 
+  | ("or_bits"|"or_bool"),_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_or x y "" build)
   | "eor_bits",_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_xor x y "" build)
-  | "and_bits",_,[x;y] -> 
+  | ("and_bits"|"and_bool"),_,[x;y] -> 
     let x = translate_expr x build and y = translate_expr y build in 
     Some (build_and x y "" build)
 
