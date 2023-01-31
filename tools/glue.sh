@@ -158,6 +158,7 @@ function main() {
 
 d="$2"
 if ! [[ -z "$d" ]]; then
+  echo "$d/$1.out" "$d/$1.err" >&2
   exec 2>"$d/$1.err"
   exec 1>"$d/$1.out"
 fi
