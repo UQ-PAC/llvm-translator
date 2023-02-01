@@ -1,5 +1,8 @@
 #include "context.h"
 #include "state.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Type.h"
+#include "llvm/Support/TypeSize.h"
 
 #include <llvm/IR/Instructions.h>
 #include <optional>
@@ -23,14 +26,15 @@ std::optional<StateReg> discriminateGlobal(std::string nm) {
     }
     char first = nm.at(0);
 
-    if (first == 'x' && nm.size() <= 3) {
+    std::string vectorRegs = "vqds";
+    if ((first == 'x' )&& nm.size() <= 3) {
         return StateReg{X, std::stoi(nm.substr(1))};
-    } else if (first == 'v' && nm.size() <= 3) {
-        return StateReg{V, std::stoi(nm.substr(1))};
     } else if (nm == "pc") {
         return StateReg{PC};
     } else if (nm == "sp") {
         return StateReg{SP};
+    } else if (vectorRegs.find(first) != std::string::npos && nm.size() <= 3) {
+        return StateReg{V, std::stoi(nm.substr(1))};
     } else if (nm.starts_with("cpsr_")) {
         return StateReg{STATUS, toupper(nm.at(5))};
     } else {
@@ -131,9 +135,29 @@ void capstone(Module& m) {
             assert(glo != nullptr && "unified global variable not found");
 
             assert(glo->getValueType() == ty);
-            assert(cap->getAllocatedType() == ty);
+            if (cap->getAllocatedType() != ty) {
+                auto size = cap->getAllocatedType()->getPrimitiveSizeInBits().getFixedSize();
+                Type* capIntTy = IntegerType::get(Context, size);
+                for (auto* use : cap->users()) {
+                    if (auto* load = dyn_cast<LoadInst>(use)) {
+                        IRBuilder irb{load};
+                        auto* load2 = irb.CreateLoad(capIntTy, glo);
+                        auto* cast = irb.CreateBitCast(load2, cap->getAllocatedType());
+                        load->replaceAllUsesWith(cast);
+                    } else if (auto* stor = dyn_cast<StoreInst>(use)) {
+                        IRBuilder irb{stor};
+                        auto* cast = irb.CreateBitCast(stor->getValueOperand(), capIntTy);
+                        auto* stor2 = irb.CreateStore(cast, glo);
+                        stor->replaceAllUsesWith(stor2);
+                    } else {
+                        errs() << *use << '\n';
+                        assert(false && "unsupported use of capstone alias register");
+                    }
 
-            cap->replaceAllUsesWith(glo);
+                }
+            } else {
+                cap->replaceAllUsesWith(glo);
+            }
         } else {
             errs() << *cap << "\n";
             assert(0 && "unhandled capstone variable");

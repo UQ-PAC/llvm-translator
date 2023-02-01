@@ -122,7 +122,7 @@ void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
         for (User* u : clone_it(glo->users())) {
             if (auto* load = dyn_cast<LoadInst>(u)) {
                 auto* valTy = load->getType(); 
-                unsigned valWd = valTy->getIntegerBitWidth(); 
+                unsigned valWd = valTy->getPrimitiveSizeInBits(); 
 
 
                 if (valWd == gloWd) {
@@ -149,7 +149,7 @@ void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
             } else if (auto* store = dyn_cast<StoreInst>(u)) {
                 auto* val = store->getValueOperand();
                 auto* valTy = val->getType();
-                unsigned valWd = valTy->getIntegerBitWidth();
+                unsigned valWd = valTy->getPrimitiveSizeInBits();
 
                 if (store->getAlign().value() > 8) {
                     store->setAlignment(llvm::Align(8));
@@ -164,12 +164,12 @@ void correctGlobalAccesses(const std::vector<GlobalVariable*>& globals) {
                 }
             } else if (auto* gep = dyn_cast<GetElementPtrInst>(u)) {
                 assert(gep->getNumIndices() == 1 && "too many indices for global register getelementptr");
-                int wd = gep->getResultElementType()->getIntegerBitWidth();
+                int wd = gep->getResultElementType()->getPrimitiveSizeInBits();
                 int index = cast<ConstantInt>(gep->idx_begin())->getSExtValue();
                 correctGetElementPtr(glo, gep, wd*index);
             } else if (auto* gep2 = dyn_cast<GEPOperator>(u)) {
                 assert(gep2->getNumIndices() == 1 && "too many indices for global register getelementptr");
-                int wd = gep2->getResultElementType()->getIntegerBitWidth();
+                int wd = gep2->getResultElementType()->getPrimitiveSizeInBits();
                 int index = cast<ConstantInt>(gep2->idx_begin())->getSExtValue();
                 correctGetElementPtr(glo, gep2, wd*index);
             } else if (auto* phi = dyn_cast<PHINode>(u)) {
