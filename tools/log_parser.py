@@ -95,15 +95,16 @@ def get_result(block: str) -> tuple[bool, LifterResult]:
   assert False, 'unhandled result block'  
 
 
-def parse_op(f: PeekIterator[str]) -> Result:
+def parse_op(f: PeekIterator[str], op: str) -> Result:
   x = next(f)
   if '\t' not in x:
-    op = x.split()[0]
     mnemonic = 'unknown'
     f.back()
   else:
+    op_old = op
     op, name, args = x.split('\t')
     op = op.split()[0]
+    assert op == op_old
     mnemonic = (name + ' ' + args).strip()
 
   consume(takeuntil(lambda x: 'Capstone' in x, f))
@@ -150,7 +151,7 @@ def main(argv):
       print(f)
       if not f.name.endswith('.out'): continue
       with open(f) as file: 
-        x = parse_op(PeekIterator(iter(file)))
+        x = parse_op(PeekIterator(iter(file)), f.stem)
         x.category = d.name
         x.errors = f.with_suffix('.err').read_text()
 
