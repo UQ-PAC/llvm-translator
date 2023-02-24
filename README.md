@@ -29,3 +29,4 @@ Components:
   ```
 - tools/post.sh is used to post-process and simplify the output of llvm-translator before passing to alive. It calls opt and runs a given list of passes. 
 - Further, Alive2 requires source/target to have the same set of global variables. llvm-translator supports `./go vars /tmp/cap.ll /tmp/rem.ll /tmp/asl.ll` which will union all variables mentioned by each lifter and insert them into the others.
+- in/ and out/ contain old snapshots of LLVM code, as an example of the different LLVM IR styles from each lifter. in/ is directly from the lifter in question, and out/ is after (an old version of) llvm-translator.
