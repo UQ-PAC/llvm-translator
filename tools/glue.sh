@@ -1,11 +1,16 @@
 #!/bin/bash
 
 
-ASLI=$HOME/asl-interpreter
-ASL_TRANS=$HOME/llvm-translator/asl-translator
-LLVM_TRANS=$HOME/llvm-translator
+# base directory for required external tools.
+# defaults to alongside 'llvm-translator' folder.
+BASE=..
 
-CAPSTONE=$HOME/retdec/build/prefix/bin/retdec-capstone2llvmir
+ASLI=$BASE/asl-interpreter
+ASL_TRANS=$BASE/llvm-translator/asl-translator
+LLVM_TRANS=$BASE/llvm-translator
+
+CAPSTONE=$BASE/retdec/build/prefix/bin/retdec-capstone2llvmir
+ALIVE=$BASE/alive2/build/alive-tv 
 
 # all opcodes in little endian compressed format
 
@@ -89,7 +94,7 @@ function alive() {
   echo '|' $1
   echo '|' $2
 
-  ~/alive2/build/alive-tv --time-verify --smt-stats --bidirectional --disable-undef-input --disable-poison-input $1 $2
+  $ALIVE --time-verify --smt-stats --bidirectional --disable-undef-input --disable-poison-input --smt-to=20000 $1 $2
 }
 
 function prefix() {

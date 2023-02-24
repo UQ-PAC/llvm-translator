@@ -3,10 +3,10 @@
 
 set -e
 out="$1"
-if [[ -z "$out" ]]; then 
+if [[ -z "$out" ]]; then
   echo "specify output directory as first argument"
-  exit 1; 
-fi 
+  exit 1;
+fi
 pwd="$(pwd)"
 mkdir -p "$out"
 cd $(dirname $0)
@@ -27,7 +27,7 @@ ASL=~/asl-interpreter
 files="$(find "$ASL/tests/coverage" -maxdepth 1 -name 'aarch64_*')"
 for f in $files;do
   echo $f
-  mkdir -p "$pwd/$out/$(basename $f)" 
+  mkdir -p "$pwd/$out/$(basename $f)"
   d=/tmp/$(date -I)
   mkdir -p $d
   pushd $ASL
