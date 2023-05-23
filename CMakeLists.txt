@@ -7,12 +7,12 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(LLVM 14 REQUIRED CONFIG
-    PATHS /usr/lib/llvm14/lib/cmake/llvm)
+    PATHS /usr/lib/llvm14)
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
-execute_process(COMMAND llvm-config-14 --libfiles core support irreader
+execute_process(COMMAND "${LLVM_TOOLS_BINARY_DIR}/llvm-config" --libfiles core support irreader
     OUTPUT_VARIABLE LLVM_LIBRARY_FILES
     OUTPUT_STRIP_TRAILING_WHITESPACE)
 message(STATUS "Using LLVM libraries: ${LLVM_LIBRARY_FILES}")

@@ -4,7 +4,7 @@ An ad-hoc collection of pieces to compare (semantically) the output of several A
 asl-interpreter is used as the baseline for comparison. 
 
 Requires:
-- LLVM 15 (?) or later
+- LLVM 14
 - https://github.com/UQ-PAC/asl-interpreter/tree/partial_eval/, beside this directory.
 - https://github.com/AliveToolkit/alive2, beside this directory and with translation validation ([see README](https://github.com/AliveToolkit/alive2#building-and-running-translation-validation)).
 - https://github.com/avast/retdec, beside and built with `cmake .. -DCMAKE_INSTALL_PREFIX=$(pwd)/prefix -DRETDEC_DEV_TOOLS=1`
