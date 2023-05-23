@@ -25,10 +25,10 @@ let translate_ty (ty: ty) : lltype =
   match ty with 
   | Type_Bits (Expr_LitInt n) -> integer_type ctx (int_of_string n)
   | Type_Constructor (Ident "boolean") -> bool_t
+  | Type_Register (wd, _) -> integer_type ctx (int_of_string wd)
   | Type_Bits _
   | Type_Constructor _
   | Type_OfExpr _
-  | Type_Register (_, _)
   | Type_Array (_, _)
   | Type_Tuple _
   | Type_App _ -> failwith @@ "translate_ty: " ^ pp_type ty

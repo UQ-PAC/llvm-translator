@@ -94,6 +94,13 @@ def get_result(block: str) -> tuple[bool, LifterResult]:
   print(repr(block))
   assert False, 'unhandled result block'  
 
+CAP_EMPTY = r'''
+entry:                                            ; preds = %forced_vars
+  %PC = load i64, ptr @PC, align 8, !noundef !0
+  %0 = add i64 %PC, 4
+  store i64 %0, ptr @PC, align 8
+  ret void
+'''.strip()
 
 def parse_op(f: PeekIterator[str], op: str) -> Result:
   x = next(f)
@@ -129,6 +136,12 @@ def parse_op(f: PeekIterator[str], op: str) -> Result:
   cap_bool,cap = get_result(cap_block)
   if 'unhandled capstone variable' in detail:
     cap = 'variable'
+  else:
+    cap_ll = [l for l in cap_block.splitlines() if l.endswith('.cap.ll')][0]
+    cap_ll = cap_ll.split('--> | ')[-1]
+    with open(cap_ll) as f:
+      if CAP_EMPTY in f.read():
+        cap = 'empty'
 
   rem_block = ''.join(lifter_block())
   rem_bool,rem = get_result(rem_block)

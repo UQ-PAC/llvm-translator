@@ -4,6 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 project(llvm-translator)
 
 set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 find_package(LLVM 14 REQUIRED CONFIG
     PATHS /usr/lib/llvm14/lib/cmake/llvm)
@@ -11,12 +12,16 @@ find_package(LLVM 14 REQUIRED CONFIG
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
 
+execute_process(COMMAND llvm-config-14 --libfiles core support irreader
+    OUTPUT_VARIABLE LLVM_LIBRARY_FILES
+    OUTPUT_STRIP_TRAILING_WHITESPACE)
+message(STATUS "Using LLVM libraries: ${LLVM_LIBRARY_FILES}")
+
 add_definitions(${LLVM_DEFINITIONS_LIST})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
-llvm_map_components_to_libnames(llvm_libs support core irreader)
-link_libraries(${llvm_libs})
+#link_libraries(${llvm_libs})
 
 find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
@@ -25,7 +30,7 @@ include_directories(${Boost_INCLUDE_DIRS})
 add_executable(go src/main.cpp src/state.cpp src/context.cpp
     src/capstone.cpp src/remill.cpp src/asl.cpp)
 
-# target_link_libraries(go stdc++_libbacktrace)
+target_link_libraries(go ${LLVM_LIBRARY_FILES})
 
 target_compile_options(go PRIVATE -g -fsanitize=address -Wall)
 target_link_options(go PRIVATE -g -fsanitize=address)
