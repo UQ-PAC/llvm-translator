@@ -19,7 +19,9 @@
  (name asl-translator)
  (synopsis "A short synopsis")
  (description "A longer description")
- (depends ocaml dune)
+ (depends ocaml dune asli 
+          (conf-llvm (and (>= 14) (< 15)))
+          (llvm (and (>= 14) (< 15))))
  (tags
   (topics "to describe" your project)))
 

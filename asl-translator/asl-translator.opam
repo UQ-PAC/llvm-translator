@@ -12,6 +12,9 @@ bug-reports: "https://github.com/username/reponame/issues"
 depends: [
   "ocaml"
   "dune" {>= "3.4"}
+  "asli"
+  "conf-llvm" {>= "14" & < "15"}
+  "llvm" {>= "14" & < "15"}
   "odoc" {with-doc}
 ]
 build: [
