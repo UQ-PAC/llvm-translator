@@ -1,23 +1,30 @@
 #!/bin/bash
 
 
-# base directory for required external tools.
-# defaults to alongside 'llvm-translator' folder.
-BASE=..
+# glue.sh [opcode] [output directory]
+# opcode in little endian compressed format.
+# output directory is optional,
+# if given, log output is written to [opcode].{err,out}
+# in that directory
+#
+# LLVM and ASL files are written to a subfolder of
+# /tmp with the date. the subfolder path is logged.
 
-ASLI=$BASE/asl-interpreter
-ASL_TRANS=$BASE/llvm-translator/asl-translator
-LLVM_TRANS=$BASE/llvm-translator
+d="$2"
+if ! [[ -z "$d" ]]; then
+  echo "$d/$1.out" "$d/$1.err" >&2
+  exec 2>"$d/$1.err"
+  exec 1>"$d/$1.out"
+fi
 
-CAPSTONE=$BASE/retdec/build/prefix/bin/retdec-capstone2llvmir
-ALIVE=$BASE/alive2/build/alive-tv 
+cd $(dirname "$0")/..
 
-# all opcodes in little endian compressed format
+. ./tools/env.sh
+
 
 function mnemonic() {
   op="$1"
-
-  tools/get_mnemonic.sh $op
+  ./tools/get_mnemonic.sh $op
 }
 
 function asli() {
@@ -30,10 +37,8 @@ function asli() {
   d=${op:6:2}
   hex="0x${d}${c}${b}${a}"
 
-  pushd $ASLI
-  echo :dump A64 $hex "$f" | ./asli tests/override.asl tests/override.prj
+  echo :dump A64 $hex "$f" | "$ASLI"
   x=$?
-  popd
 
   return $x
 }
@@ -41,17 +46,15 @@ function asli() {
 function asl_translate() {
   in=$1
   out=$2
-  pushd $ASL_TRANS > /dev/null
-  _build/default/bin/main.exe $in > $out
+  "$ASL_TRANSLATOR" $in > $out
   x=$?
-  popd > /dev/null
   return $x
 }
 
 function capstone() {
   op=$1
   f=$2
-  $CAPSTONE -a arm64 -b 0x0 -c "$op" -o $f
+  "$CAPSTONE" -a arm64 -b 0x0 -c "$op" -o $f
   return $?
 }
 
@@ -66,20 +69,18 @@ function llvm_translate() {
   in=$1
   out=$2
   mode=$3
-  pushd $LLVM_TRANS > /dev/null
-  build/go $mode $in 2>&1 1>${out}tmp
+
+  "$LLVM_TRANSLATOR" $mode $in 2>&1 1>${out}tmp
   x=$?
   cat ${out}tmp | tools/post.sh > $out
   rm -f ${out}tmp
-  popd > /dev/null
+
   return $x
 }
 
 function llvm_translate_vars() {
-  pushd $LLVM_TRANS > /dev/null
-  build/go vars $@
+  "$LLVM_TRANSLATOR" vars $@
   x=$?
-  popd > /dev/null
   return $x
 }
 
@@ -94,7 +95,7 @@ function alive() {
   echo '|' $1
   echo '|' $2
 
-  $ALIVE --time-verify --smt-stats --bidirectional --disable-undef-input --disable-poison-input --smt-to=20000 $1 $2
+  "$ALIVE" --time-verify --smt-stats --bidirectional --disable-undef-input --disable-poison-input --smt-to=20000 $1 $2
 }
 
 function prefix() {
@@ -160,15 +161,6 @@ function main() {
     echo "$op ==> FAILED. cap $cap, rem $rem"
   fi
 }
-
-d="$2"
-if ! [[ -z "$d" ]]; then
-  echo "$d/$1.out" "$d/$1.err" >&2
-  exec 2>"$d/$1.err"
-  exec 1>"$d/$1.out"
-fi
-
-cd $(dirname "$0")/..
 
 x="$(main "$1")"
 echo "$x"

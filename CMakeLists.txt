@@ -27,13 +27,13 @@ find_package(Boost REQUIRED)
 include_directories(${Boost_INCLUDE_DIRS})
 
 # add the executable
-add_executable(go src/main.cpp src/state.cpp src/context.cpp
+add_executable(llvm-translator src/main.cpp src/state.cpp src/context.cpp
     src/capstone.cpp src/remill.cpp src/asl.cpp)
 
-target_link_libraries(go ${LLVM_LIBRARY_FILES})
+target_link_libraries(llvm-translator ${LLVM_LIBRARY_FILES})
 
-target_compile_options(go PRIVATE -g -fsanitize=address -Wall)
-target_link_options(go PRIVATE -g -fsanitize=address)
+target_compile_options(llvm-translator PRIVATE -g -fsanitize=address -Wall)
+target_link_options(llvm-translator PRIVATE -g -fsanitize=address)
 
 
 

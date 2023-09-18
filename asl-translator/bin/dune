@@ -1,5 +1,5 @@
 (executable
- (public_name test)
+ (public_name asl-translator)
  (name main)
  (libraries test)
  (flags (:standard -g -ccopt -g -verbose))
