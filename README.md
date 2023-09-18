@@ -5,8 +5,8 @@ asl-interpreter is used as the baseline for comparison.
 
 Requires:
 - LLVM 14
-- https://github.com/UQ-PAC/asl-interpreter/tree/partial_eval/, beside this directory.
-- https://github.com/AliveToolkit/alive2, beside this directory and with translation validation ([see README](https://github.com/AliveToolkit/alive2#building-and-running-translation-validation)).
+- https://github.com/UQ-PAC/aslp/tree/partial_eval/, beside this directory and with folder name _asl-interpreter_.
+- https://github.com/AliveToolkit/alive2, beside this directory and with translation validation ([see README](https://github.com/AliveToolkit/alive2#building-and-running-translation-validation)). Commit [bc51b72c](https://github.com/AliveToolkit/alive2/commit/bc51b72cf5773967fd29155f1ffb251df4d5e94e) with cherry-pick [9a7504a9](https://github.com/AliveToolkit/alive2/commit/9a7504a99972e2c613deacaa8a4f1798829d2ff2) and LLVM 15 from [here](https://github.com/katrinafyi/pac-environment/releases/tag/llvm).
 - https://github.com/avast/retdec, beside and built with `cmake .. -DCMAKE_INSTALL_PREFIX=$(pwd)/prefix -DRETDEC_DEV_TOOLS=1`
 - https://github.com/lifting-bits/remill, as "remill" Docker container.
 
@@ -18,13 +18,19 @@ Usage:
 - `tools/log_parser.py logs_dir out.csv` parses the log directory logs_dir which should contain the output of bulk.sh. Results are tabulated for further analysis.
 
 Components:
-- asl-translator/ contains an OCaml dune project which translates asl-interpreter's reduced ASL into LLVM IR. 
-  - Dump ASL from asl-interpreter with `:dump A64 0x8b020021 /tmp/sem.aslb`, then run asl-translator with `dune exec test /tmp/sem.aslb`.
+- asl-translator/ contains an OCaml dune project which translates asl-interpreter's reduced ASL into LLVM IR.
+  ```bash
+  cd asl-translator
+  eval $(opam env)  # make sure to use non-system ocaml compiler
+  opam pin ../../asl-interpreter  # path to asl-interpreter repository
+  opam install --deps-only ./asl-translator.opam  # also install LLVM 14 through system packages
+  dune build
+  ```
+  Then, dump ASL from asl-interpreter with `:dump A64 0x8b020021 /tmp/sem.aslb`, then run asl-translator with `dune exec test /tmp/sem.aslb`.
 - This directory (llvm-translator) is a C++ project which unifies the LLVM IR from each lifter. 
   ```bash
-  mkdir -p build && cd build 
-  cmake ..
-  make
+  cmake -B build .
+  cmake --build build
   ./go rem /tmp/remill_out.ll  # also supports 'cap' and 'asl'
   ```
 - tools/post.sh is used to post-process and simplify the output of llvm-translator before passing to alive. It calls opt and runs a given list of passes. 
