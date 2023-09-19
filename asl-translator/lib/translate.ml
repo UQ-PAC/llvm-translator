@@ -7,7 +7,7 @@ let a = 2
 let ctx : llcontext = Llvm.global_context ()
 
 let llmodule : llmodule = Llvm_irreader.parse_ir ctx
-  (Llvm.MemoryBuffer.of_file "./lib/state.ll")
+  (Llvm.MemoryBuffer.of_string State.state_ll)
 
 let bool_t = i1_type ctx
 let bool_true = const_all_ones bool_t 

@@ -1,3 +1,4 @@
+let state_ll = {|
 ; base unified state representation
 source_filename = "/nonexistent.ll"
 
@@ -76,3 +77,5 @@ source_filename = "/nonexistent.ll"
 define void @root() {
   ret void
 }
+
+|}

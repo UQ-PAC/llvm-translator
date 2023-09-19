@@ -1,6 +1,6 @@
 (library
  (name test)
- (modules translate)
+ (modules translate state)
  (libraries asli.libASL llvm llvm.irreader  llvm.analysis zarith)
  (flags (:standard -g -ccopt -g -verbose))
  (ocamlc_flags (-custom)))
