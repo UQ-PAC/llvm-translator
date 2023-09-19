@@ -4,7 +4,6 @@
 #include <llvm/IR/Instructions.h>
 #include <llvm/IR/Attributes.h>
 #include <llvm/Transforms/Utils/UnifyFunctionExitNodes.h>
-
 #include <optional>
 #include <string>
 #include <span>
@@ -94,6 +93,12 @@ void replaceRemillStateAccess(Module& m, Function& f) {
 
       assert(alloc->isSafeToRemove());
       alloc->eraseFromParent();
+    } else if (ConstantInt* val; store && store->getPointerOperand() == state 
+        && (val = dyn_cast<ConstantInt>(store->getValueOperand()))
+        && val->equalsInt(32)) {
+      // eliminate: store i32 32, ptr %state, align 16
+      assert(store->isSafeToRemove());
+      store->eraseFromParent();
     } else {
       if (auto call = dyn_cast<CallInst>(u)) {
         // remill-style branch: call ptr @sub_fffffffffffffffc(ptr %state, i64 %10, ptr %9)
@@ -110,7 +115,6 @@ void replaceRemillStateAccess(Module& m, Function& f) {
           continue;
         }
       }
-      
       errs() << *u << '\n';
       assert(false && "unsupported user of remill state");
     }
@@ -147,6 +151,7 @@ void replaceRemillStateAccess(Module& m, Function& f) {
 }
 
 void replaceRemillTailCall(Module& m, Function& f) {
+  assert(!findFunction(m, "__remill_error") && "opcode unsupported in remill");
   Function* missing_block = findFunction(m, "__remill_missing_block");
   if (!missing_block) {
     missing_block = findFunction(m, "__remill_error");

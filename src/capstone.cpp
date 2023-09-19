@@ -43,7 +43,9 @@ std::optional<StateReg> discriminateGlobal(std::string nm) {
 }
 
 void capstoneMakeBranchCond(Module& m, GlobalVariable& pc) {
-    Function& f = *findFunction(m, "capstone_branch_cond");
+    Function* f2 = findFunction(m, "capstone_branch_cond");
+    if (f2 == NULL) return;
+    Function& f = *f2;
     assert(f.arg_size() == 2);
 
     Type* ty = pc.getValueType();
@@ -64,7 +66,9 @@ void capstoneMakeBranchCond(Module& m, GlobalVariable& pc) {
 }
 
 void capstoneMakeBranch(Module& m, GlobalVariable& pc) {
-    Function& f = *findFunction(m, "capstone_branch");
+    Function* f2 = findFunction(m, "capstone_branch");
+    if (f2 == NULL) return;
+    Function& f = *f2;
     assert(f.arg_size() == 1);
 
     auto* bb = BasicBlock::Create(Context, "", &f);
@@ -77,7 +81,9 @@ void capstoneMakeBranch(Module& m, GlobalVariable& pc) {
 }
 
 void capstoneMakeReturn(Module& m, GlobalVariable& pc) {
-    Function& f = *findFunction(m, "capstone_return");
+    Function* f2 = findFunction(m, "capstone_return");
+    if (f2 == NULL) return;
+    Function& f = *f2;
     auto* bb = BasicBlock::Create(Context, "", &f);
 
     // a return is just a branch.
@@ -90,16 +96,18 @@ void capstoneMakeReturn(Module& m, GlobalVariable& pc) {
 void capstone(Module& m) {
     assert(m.getFunctionList().size() > 0);
 
-    if (auto* capVar = m.getNamedGlobal("capstone_asm2llvm")) {
-        for (auto* user : clone_it(capVar->users())) {
-            if (auto* inst = dyn_cast<Instruction>(user)) {
-                errs() << "deleting: " << *inst << '\n';
-                assert(inst->isSafeToRemove());
-                inst->eraseFromParent();
+    for (const auto del : {"capstone_asm2llvm", "0"}) {
+        if (auto* capVar = m.getNamedGlobal(del)) {
+            for (auto* user : clone_it(capVar->users())) {
+                if (auto* inst = dyn_cast<Instruction>(user)) {
+                    errs() << "deleting: " << *inst << '\n';
+                    assert(inst->isSafeToRemove());
+                    inst->eraseFromParent();
+                }
             }
+            assert(capVar->getNumUses() == 0);
+            capVar->eraseFromParent();
         }
-        assert(capVar->getNumUses() == 0);
-        capVar->eraseFromParent();
     }
 
     Function& f = *m.begin();
@@ -158,6 +166,15 @@ void capstone(Module& m) {
             } else {
                 cap->replaceAllUsesWith(glo);
             }
+        } else if (!cap->hasName() && cap->getNumUses() <= 1) {
+            // eliminate: store volatile i64 0, i64* @0
+            for (auto* use : clone_it(cap->users())) {
+                if (auto* inst = dyn_cast<Instruction>(use)) {
+                    assert(inst->isSafeToRemove());
+                    inst->eraseFromParent();
+                }
+            }
+            assert(cap->getNumUses() == 0);
         } else {
             errs() << *cap << "\n";
             assert(0 && "unhandled capstone variable");
